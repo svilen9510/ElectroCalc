@@ -1,137 +1,260 @@
+import { CONDUCTOR_MATERIALS } from "../../data/conductor-materials.js";
 import {
   DEFAULT_CABLE_SECTION_MM2,
   STANDARD_CABLE_SECTIONS_MM2
 } from "../../data/cable-sizes.js";
 import { calculateVoltageDrop } from "../calculators/voltage-drop.js";
 import { formatNumber } from "../utils/format.js";
-import { positiveNumber } from "../utils/validation.js";
+import { positiveNumber, rangeNumber } from "../utils/validation.js";
 import { setStatus } from "./results.js";
 import { initDesktopSelectPicker } from "./select-picker.js";
 
 export function initVoltageDropCalculator() {
-  const current = document.querySelector("#drop-current");
-  const length = document.querySelector("#drop-length");
-  const voltage = document.querySelector("#drop-voltage");
-  const material = document.querySelector("#drop-material");
-  const section = document.querySelector("#drop-section");
-  const voltsOut = document.querySelector("#drop-result-volts");
-  const percentOut = document.querySelector("#drop-result-percent");
-  const statusOut = document.querySelector("#drop-status");
-  const summary = document.querySelector("#drop-summary");
-  const formula = document.querySelector("#drop-formula");
-  const validation = document.querySelector("#drop-validation");
-  const tbody = document.querySelector("#drop-comparison-body");
-  const phaseButtons = [...document.querySelectorAll("[data-drop-phase]")];
-  const sections = STANDARD_CABLE_SECTIONS_MM2;
+  const currentInput = document.getElementById("drop-current");
+  const currentField = document.getElementById("drop-current-field");
+  const powerInput = document.getElementById("drop-power");
+  const powerField = document.getElementById("drop-power-field");
+  const powerUnitSelect = document.getElementById("drop-power-unit");
+  const voltageInput = document.getElementById("drop-voltage");
+  const cosPhiInput = document.getElementById("drop-cosphi");
+  const lengthInput = document.getElementById("drop-length");
+  const materialSelect = document.getElementById("drop-material");
+  const sectionSelect = document.getElementById("drop-section");
+  const voltsOutput = document.getElementById("drop-result-volts");
+  const percentOutput = document.getElementById("drop-result-percent");
+  const currentOutput = document.getElementById("drop-result-current");
+  const statusOutput = document.getElementById("drop-status");
+  const summaryOutput = document.getElementById("drop-summary");
+  const formulaOutput = document.getElementById("drop-formula");
+  const validationOutput = document.getElementById("drop-validation");
+  const comparisonBody = document.getElementById("drop-comparison-body");
+  const phaseButtons = document.querySelectorAll("[data-drop-phase]");
+  const inputModeButtons = document.querySelectorAll("[data-drop-input-mode]");
 
-  section.innerHTML = sections.map((candidate) =>
-    `<option value="${candidate}">${candidate} mm²</option>`
-  ).join("");
-  section.value = String(DEFAULT_CABLE_SECTION_MM2);
+  if (
+    !currentInput || !currentField || !powerInput || !powerField ||
+    !powerUnitSelect || !voltageInput || !cosPhiInput || !lengthInput ||
+    !materialSelect || !sectionSelect || !voltsOutput || !percentOutput ||
+    !currentOutput || !statusOutput || !summaryOutput || !formulaOutput ||
+    !validationOutput || !comparisonBody
+  ) {
+    return;
+  }
 
-  const syncMaterialPicker = initDesktopSelectPicker(material);
-  const syncSectionPicker = initDesktopSelectPicker(section);
+  sectionSelect.replaceChildren(
+    ...STANDARD_CABLE_SECTIONS_MM2.map((section) => {
+      const option = document.createElement("option");
+      option.value = String(section);
+      option.textContent = `${section} mm²`;
+      option.selected = section === DEFAULT_CABLE_SECTION_MM2;
+      return option;
+    })
+  );
+
+  const syncMaterialPicker = initDesktopSelectPicker(materialSelect);
+  const syncSectionPicker = initDesktopSelectPicker(sectionSelect);
+  const syncPowerUnitPicker = initDesktopSelectPicker(powerUnitSelect, { minWidth: 160 });
 
   let phases = 1;
+  let inputMode = "current";
 
-  function getMaterialLabel() {
-    return material.value === "aluminum" ? "Al" : "Cu";
+  function setInputMode(nextMode) {
+    inputMode = nextMode;
+    currentField.hidden = inputMode !== "current";
+    powerField.hidden = inputMode !== "power";
+
+    inputModeButtons.forEach((button) => {
+      const isActive = button.dataset.dropInputMode === inputMode;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
+    });
   }
 
   function update() {
     syncMaterialPicker();
     syncSectionPicker();
+    syncPowerUnitPicker();
 
-    const i = positiveNumber(current.value, "Токът");
-    const l = positiveNumber(length.value, "Дължината");
-    const u = positiveNumber(voltage.value, "Напрежението");
-    const s = positiveNumber(section.value, "Сечението");
-
-    const firstError = [i, l, u, s].find((item) => !item.ok);
+    const loadResult = inputMode === "power"
+      ? positiveNumber(
+        Number(powerInput.value) * Number(powerUnitSelect.value),
+        "Мощността"
+      )
+      : positiveNumber(currentInput.value, "Токът");
+    const voltageResult = positiveNumber(voltageInput.value, "Напрежението");
+    const cosPhiResult = rangeNumber(
+      cosPhiInput.value,
+      "cos φ",
+      0.01,
+      1
+    );
+    const lengthResult = positiveNumber(lengthInput.value, "Дължината");
+    const sectionResult = positiveNumber(sectionSelect.value, "Сечението");
+    const firstError = [loadResult, voltageResult, cosPhiResult, lengthResult, sectionResult]
+      .find((result) => !result.ok);
 
     if (firstError) {
-      validation.textContent = firstError.message;
-      voltsOut.textContent = "—";
-      percentOut.textContent = "—";
-      tbody.innerHTML = "";
+      validationOutput.textContent = firstError.message;
+      voltsOutput.textContent = "—";
+      percentOutput.textContent = "—";
+      currentOutput.textContent = "Изчислен ток: —";
+      summaryOutput.textContent = "—";
+      formulaOutput.replaceChildren();
+      comparisonBody.replaceChildren();
+      setStatus(statusOutput, { label: "—", className: "" });
       return;
     }
 
-    validation.textContent = "";
+    validationOutput.textContent = "";
 
-    const calc = calculateVoltageDrop({
-      current: i.value,
-      lengthMeters: l.value,
-      sectionMm2: s.value,
-      voltage: u.value,
-      material: material.value,
+    const powerWatts = inputMode === "power"
+      ? loadResult.value
+      : undefined;
+    const calculationInput = {
+      inputMode,
+      current: inputMode === "current" ? loadResult.value : undefined,
+      powerWatts,
+      voltage: voltageResult.value,
+      cosPhi: cosPhiResult.value,
+      lengthMeters: lengthResult.value,
+      sectionMm2: sectionResult.value,
+      material: materialSelect.value,
       phases
+    };
+    const result = calculateVoltageDrop(calculationInput);
+
+    voltsOutput.textContent = formatNumber(result.voltageDrop, 2);
+    percentOutput.textContent = `${formatNumber(result.percent, 2)}%`;
+    currentOutput.textContent = `Изчислен ток: ${formatNumber(result.current, 2)} A`;
+    summaryOutput.textContent = `${getMaterialLabel(materialSelect.value)} · ${formatNumber(sectionResult.value, 1)} mm² · ${formatNumber(lengthResult.value, 1)} m еднопосочно`;
+    setStatus(statusOutput, getVoltageDropStatus(result.percent));
+    renderFormula({
+      inputMode,
+      powerWatts,
+      voltage: voltageResult.value,
+      cosPhi: cosPhiResult.value,
+      lengthMeters: lengthResult.value,
+      sectionMm2: sectionResult.value,
+      material: materialSelect.value,
+      phases,
+      result
     });
-
-    voltsOut.textContent = formatNumber(calc.voltageDrop, 2);
-    percentOut.textContent = `${formatNumber(calc.percent, 2)}%`;
-    setStatus(statusOut, getVoltageDropStatus(calc.percent));
-
-    summary.textContent = `${getMaterialLabel()} · ${formatNumber(s.value, 1)} mm² · ${formatNumber(l.value, 1)} m`;
-
-    const factor = phases === 3 ? "√3" : "2";
-    formula.innerHTML = `
-      <p>Опростен резистивен модел:</p>
-      <code>ΔU = ${factor} × I × ρ × L / S</code>
-      <code>ΔU = ${formatNumber(calc.voltageDrop, 2)} V · ${formatNumber(calc.percent, 2)}%</code>
-    `;
-
-    const comparisonSections = getComparisonSections(sections, s.value);
-
-    tbody.innerHTML = comparisonSections.map((candidate) => {
-      const row = calculateVoltageDrop({
-        current: i.value,
-        lengthMeters: l.value,
-        sectionMm2: candidate,
-        voltage: u.value,
-        material: material.value,
-        phases
-      });
-
-      const rowStatus = getVoltageDropStatus(row.percent);
-      const selected = Number(candidate) === Number(s.value) ? "is-selected" : "";
-
-      return `
-        <tr
-          class="${selected}"
-          data-section="${candidate}"
-          role="button"
-          tabindex="0"
-          aria-label="Избери сечение ${formatNumber(candidate, 1)} mm²"
-        >
-          <td data-label="Сечение"><strong>${formatNumber(candidate, 1)} mm²</strong></td>
-          <td data-label="ΔU">${formatNumber(row.voltageDrop, 2)} V</td>
-          <td data-label="ΔU %">${formatNumber(row.percent, 2)}%</td>
-          <td data-label="Статус"><span class="status-pill ${rowStatus.className}">${rowStatus.label}</span></td>
-        </tr>
-      `;
-    }).join("");
+    renderComparison(calculationInput, sectionResult.value);
   }
 
-  [current, length, voltage, material, section].forEach((element) => {
-    element.addEventListener("input", update);
-    element.addEventListener("change", update);
+  function renderFormula({
+    inputMode: mode,
+    powerWatts,
+    voltage,
+    cosPhi,
+    lengthMeters,
+    sectionMm2,
+    material,
+    phases: phaseCount,
+    result
+  }) {
+    const isThreePhase = Number(phaseCount) === 3;
+    const phaseFactor = isThreePhase ? "√3" : "2";
+    const resistivity = CONDUCTOR_MATERIALS[material].resistivityOhmMm2PerM;
+    const currentExplanation = mode === "power"
+      ? `
+        <p>Ток от активна мощност:</p>
+        <code>I = ${isThreePhase ? "P / (√3 × U × cos φ)" : "P / (U × cos φ)"}</code>
+        <code>I = ${formatNumber(powerWatts, 2)} / (${isThreePhase ? "√3 × " : ""}${formatNumber(voltage, 2)} × ${formatNumber(cosPhi, 2)}) = ${formatNumber(result.current, 2)} A</code>
+      `
+      : `
+        <p>Въведен ток:</p>
+        <code>I = ${formatNumber(result.current, 2)} A</code>
+      `;
+
+    formulaOutput.innerHTML = `
+      ${currentExplanation}
+      <p>Пад на напрежение — резистивен модел:</p>
+      <code>ΔU = ${phaseFactor} × I × L × (ρ / S) × cos φ</code>
+      <code>ΔU = ${phaseFactor} × ${formatNumber(result.current, 2)} × ${formatNumber(lengthMeters, 2)} × (${formatNumber(resistivity, 4)} / ${formatNumber(sectionMm2, 2)}) × ${formatNumber(cosPhi, 2)} = ${formatNumber(result.voltageDrop, 2)} V</code>
+      <code>ΔU% = (ΔU / U) × 100 = (${formatNumber(result.voltageDrop, 2)} / ${formatNumber(voltage, 2)}) × 100 = ${formatNumber(result.percent, 2)}%</code>
+      <p><strong>Допускания:</strong> установен синусоидален AC режим; ${isThreePhase ? "балансиран трифазен товар; линейно (междуфазно) напрежение; " : ""}еднопосочна физическа дължина; специфично съпротивление при ${CONDUCTOR_MATERIALS[material].referenceTemperatureC}°C; без реактивно съпротивление и температурна компенсация.</p>
+    `;
+  }
+
+  function renderComparison(calculationInput, selectedSection) {
+    comparisonBody.replaceChildren(
+      ...getComparisonSections(selectedSection).map((candidateSection) => {
+        const candidateResult = calculateVoltageDrop({
+          ...calculationInput,
+          sectionMm2: candidateSection
+        });
+        const rowStatus = getVoltageDropStatus(candidateResult.percent);
+        const row = document.createElement("tr");
+        row.dataset.section = String(candidateSection);
+        row.setAttribute("role", "button");
+        row.tabIndex = 0;
+        row.setAttribute(
+          "aria-label",
+          `Избери сечение ${formatNumber(candidateSection, 1)} mm²`
+        );
+        row.innerHTML = `
+          <td data-label="Сечение"><strong>${formatNumber(candidateSection, 1)} mm²</strong></td>
+          <td data-label="ΔU">${formatNumber(candidateResult.voltageDrop, 2)} V</td>
+          <td data-label="ΔU %">${formatNumber(candidateResult.percent, 2)}%</td>
+          <td data-label="Статус"><span class="status-pill ${rowStatus.className}">${rowStatus.label}</span></td>
+        `;
+        if (candidateSection === selectedSection) {
+          row.classList.add("is-selected");
+        }
+        return row;
+      })
+    );
+  }
+
+  inputModeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setInputMode(button.dataset.dropInputMode);
+      update();
+    });
+  });
+
+  phaseButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      phases = Number(button.dataset.dropPhase);
+      phaseButtons.forEach((phaseButton) => {
+        phaseButton.classList.toggle("is-active", phaseButton === button);
+      });
+
+      if (phases === 1 && Number(voltageInput.value) === 400) voltageInput.value = "230";
+      if (phases === 3 && Number(voltageInput.value) === 230) voltageInput.value = "400";
+
+      update();
+    });
+  });
+
+  [
+    currentInput,
+    powerInput,
+    powerUnitSelect,
+    voltageInput,
+    cosPhiInput,
+    lengthInput,
+    materialSelect,
+    sectionSelect
+  ].forEach((control) => {
+    control.addEventListener("input", update);
+    control.addEventListener("change", update);
   });
 
   function chooseSectionFromRow(row) {
-    const value = row?.dataset?.section;
-    if (!value) return;
+    const section = Number(row?.dataset?.section);
+    if (!STANDARD_CABLE_SECTIONS_MM2.includes(section)) return;
 
-    section.value = value;
+    sectionSelect.value = String(section);
     update();
   }
 
-  tbody.addEventListener("click", (event) => {
-    const row = event.target.closest("tr[data-section]");
-    chooseSectionFromRow(row);
+  comparisonBody.addEventListener("click", (event) => {
+    chooseSectionFromRow(event.target.closest("tr[data-section]"));
   });
 
-  tbody.addEventListener("keydown", (event) => {
+  comparisonBody.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== " ") return;
 
     const row = event.target.closest("tr[data-section]");
@@ -141,33 +264,12 @@ export function initVoltageDropCalculator() {
     chooseSectionFromRow(row);
   });
 
-  phaseButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      phases = Number(button.dataset.dropPhase);
-      phaseButtons.forEach((b) => b.classList.toggle("is-active", b === button));
-
-      if (phases === 1 && Number(voltage.value) === 400) voltage.value = 230;
-      if (phases === 3 && Number(voltage.value) === 230) voltage.value = 400;
-
-      update();
-    });
-  });
-
+  setInputMode("current");
   update();
 }
 
-function getComparisonSections(sections, selectedSection) {
-  const selectedIndex = sections.indexOf(Number(selectedSection));
-  const windowSize = Math.min(5, sections.length);
-
-  if (selectedIndex < 0) return sections.slice(0, windowSize);
-
-  const start = Math.min(
-    Math.max(selectedIndex - 2, 0),
-    sections.length - windowSize
-  );
-
-  return sections.slice(start, start + windowSize);
+function getMaterialLabel(material) {
+  return material === "aluminum" ? "Al" : "Cu";
 }
 
 function getVoltageDropStatus(percent) {
@@ -180,4 +282,16 @@ function getVoltageDropStatus(percent) {
   }
 
   return { label: "● Над 5%", className: "status-danger" };
+}
+
+function getComparisonSections(selectedSection) {
+  const selectedIndex = STANDARD_CABLE_SECTIONS_MM2.indexOf(selectedSection);
+  if (selectedIndex === -1) {
+    return [];
+  }
+
+  const visibleCount = Math.min(5, STANDARD_CABLE_SECTIONS_MM2.length);
+  const maximumStart = STANDARD_CABLE_SECTIONS_MM2.length - visibleCount;
+  const start = Math.min(Math.max(selectedIndex - 2, 0), maximumStart);
+  return STANDARD_CABLE_SECTIONS_MM2.slice(start, start + visibleCount);
 }
