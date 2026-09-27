@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="bg" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="ElectroCalc — бързи електротехнически изчисления за мощност, ток и пад на напрежение.">
+  <title>ElectroCalc</title>
+  <link rel="icon" href="./assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./css/variables.css">
+  <link rel="stylesheet" href="./css/base.css">
+  <link rel="stylesheet" href="./css/components.css">
+  <link rel="stylesheet" href="./css/responsive.css">
+</head>
+
+<body>
+  <header class="app-header">
+    <div class="container header-inner">
+      <a class="brand" href="#home" aria-label="ElectroCalc начало">
+        <span class="brand-mark" aria-hidden="true">⚡</span>
+        <span class="brand-text">ElectroCalc</span>
+      </a>
+
+      <nav class="desktop-nav" aria-label="Основна навигация">
+        <button class="nav-link is-active" data-view-target="home">Начало</button>
+        <button class="nav-link" data-view-target="power">Мощност и ток</button>
+        <button class="nav-link" data-view-target="voltage-drop">Пад на напрежение</button>
+      </nav>
+
+      <button id="theme-toggle" class="icon-button" type="button" aria-label="Смени темата" title="Смени темата">
+        <span class="theme-icon" aria-hidden="true">🌙</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="container app-main">
+    <section id="view-home" class="view is-active" data-view="home">
+      <div class="hero">
+        <div>
+          <span class="eyebrow">Електротехнически помощник</span>
+          <h1>Бързи сметки. Ясни резултати.</h1>
+          <p class="hero-copy">
+            ElectroCalc е лек уеб инструмент за ежедневни електротехнически изчисления —
+            удобен на компютър, таблет и телефон.
+          </p>
+        </div>
+
+        <div class="hero-status">
+          <span class="status-dot"></span>
+          <span>Версия 0.1.0 · GitHub baseline</span>
+        </div>
+      </div>
+
+      <div class="tool-grid">
+        <button class="tool-card" data-view-target="power" type="button">
+          <span class="tool-icon">⚡</span>
+          <span class="tool-copy">
+            <strong>Мощност → ток</strong>
+            <small>1-фазни и 3-фазни товари</small>
+          </span>
+          <span class="tool-arrow">→</span>
+        </button>
+
+        <button class="tool-card" data-view-target="voltage-drop" type="button">
+          <span class="tool-icon">📉</span>
+          <span class="tool-copy">
+            <strong>Пад на напрежение</strong>
+            <small>Дължина, сечение и материал</small>
+          </span>
+          <span class="tool-arrow">→</span>
+        </button>
+
+        <div class="tool-card is-disabled" aria-disabled="true">
+          <span class="tool-icon">🔌</span>
+          <span class="tool-copy">
+            <strong>Избор на кабел</strong>
+            <small>Предстои във версия 0.2</small>
+          </span>
+          <span class="badge">скоро</span>
+        </div>
+
+        <div class="tool-card is-disabled" aria-disabled="true">
+          <span class="tool-icon">🛡️</span>
+          <span class="tool-copy">
+            <strong>Избор на защита</strong>
+            <small>Предстои във версия 0.2</small>
+          </span>
+          <span class="badge">скоро</span>
+        </div>
+      </div>
+
+      <div class="info-panel">
+        <div>
+          <strong>Архитектура без излишно усложняване</strong>
+          <p>Логиката за смятане, UI и помощните функции са разделени, но проектът остава лесен за поддръжка.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-power" class="view" data-view="power">
+      <div class="section-heading">
+        <div>
+          <button class="back-link" data-view-target="home" type="button">← Начало</button>
+          <h2>Мощност и ток</h2>
+          <p>Изчисли тока по зададена активна мощност.</p>
+        </div>
+      </div>
+
+      <div class="calculator-layout">
+        <form id="power-form" class="calc-panel" novalidate>
+          <div class="field-group">
+            <span class="field-label">Система</span>
+            <div class="segmented-control" role="group" aria-label="Тип система">
+              <button type="button" class="segment is-active" data-power-phase="1">1-фазно</button>
+              <button type="button" class="segment" data-power-phase="3">3-фазно</button>
+            </div>
+          </div>
+
+          <div class="fields-grid">
+            <label class="field">
+              <span class="field-label">Мощност</span>
+              <span class="input-wrap">
+                <input id="power-value" type="number" min="0" step="0.01" value="5.5" inputmode="decimal">
+                <select id="power-unit" aria-label="Единица за мощност">
+                  <option value="1000" selected>kW</option>
+                  <option value="1">W</option>
+                </select>
+              </span>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Напрежение</span>
+              <span class="input-wrap">
+                <input id="power-voltage" type="number" min="1" step="1" value="230" inputmode="decimal">
+                <span class="unit">V</span>
+              </span>
+            </label>
+
+            <label class="field">
+              <span class="field-label">cos φ</span>
+              <span class="input-wrap">
+                <input id="power-cosphi" type="number" min="0.01" max="1" step="0.01" value="1" inputmode="decimal">
+              </span>
+            </label>
+          </div>
+
+          <div id="power-validation" class="validation-message" aria-live="polite"></div>
+        </form>
+
+        <aside class="result-panel" aria-live="polite">
+          <span class="result-kicker">Изчислен ток</span>
+          <div class="result-main">
+            <span id="power-result" class="result-number">23.91</span>
+            <span class="result-unit">A</span>
+          </div>
+          <div class="result-meta">
+            <span id="power-summary">5.5 kW · 230 V · 1-фазно</span>
+          </div>
+
+          <details class="formula-box">
+            <summary>Как е изчислено?</summary>
+            <div id="power-formula" class="formula-content"></div>
+          </details>
+        </aside>
+      </div>
+    </section>
+
+    <section id="view-voltage-drop" class="view" data-view="voltage-drop">
+      <div class="section-heading">
+        <div>
+          <button class="back-link" data-view-target="home" type="button">← Начало</button>
+          <h2>Пад на напрежение</h2>
+          <p>Бърза проверка по ток, дължина, материал и сечение.</p>
+        </div>
+      </div>
+
+      <div class="calculator-layout">
+        <form id="drop-form" class="calc-panel" novalidate>
+          <div class="field-group">
+            <span class="field-label">Система</span>
+            <div class="segmented-control" role="group" aria-label="Тип система">
+              <button type="button" class="segment is-active" data-drop-phase="1">1-фазно</button>
+              <button type="button" class="segment" data-drop-phase="3">3-фазно</button>
+            </div>
+          </div>
+
+          <div class="fields-grid">
+            <label class="field">
+              <span class="field-label">Ток</span>
+              <span class="input-wrap">
+                <input id="drop-current" type="number" min="0" step="0.01" value="23.9" inputmode="decimal">
+                <span class="unit">A</span>
+              </span>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Дължина на трасето</span>
+              <span class="input-wrap">
+                <input id="drop-length" type="number" min="0" step="0.1" value="35" inputmode="decimal">
+                <span class="unit">m</span>
+              </span>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Напрежение</span>
+              <span class="input-wrap">
+                <input id="drop-voltage" type="number" min="1" step="1" value="230" inputmode="decimal">
+                <span class="unit">V</span>
+              </span>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Материал</span>
+              <span class="input-wrap">
+                <select id="drop-material">
+                  <option value="copper" selected>Мед (Cu)</option>
+                  <option value="aluminum">Алуминий (Al)</option>
+                </select>
+              </span>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Сечение</span>
+              <span class="input-wrap">
+                <select id="drop-section">
+                  <option value="1.5">1.5 mm²</option>
+                  <option value="2.5">2.5 mm²</option>
+                  <option value="4" selected>4 mm²</option>
+                  <option value="6">6 mm²</option>
+                  <option value="10">10 mm²</option>
+                  <option value="16">16 mm²</option>
+                </select>
+              </span>
+            </label>
+          </div>
+
+          <div id="drop-validation" class="validation-message" aria-live="polite"></div>
+        </form>
+
+        <aside class="result-panel" aria-live="polite">
+          <span class="result-kicker">Пад на напрежение</span>
+          <div class="result-main">
+            <span id="drop-result-volts" class="result-number">0.00</span>
+            <span class="result-unit">V</span>
+          </div>
+
+          <div class="result-secondary">
+            <span id="drop-result-percent">0.00%</span>
+            <span id="drop-status" class="status-pill status-ok">● Допустимо</span>
+          </div>
+
+          <div class="result-meta">
+            <span id="drop-summary">Cu · 4 mm² · 35 m</span>
+          </div>
+
+          <details class="formula-box">
+            <summary>Как е изчислено?</summary>
+            <div id="drop-formula" class="formula-content"></div>
+          </details>
+        </aside>
+      </div>
+
+      <section class="comparison-panel">
+        <div class="comparison-heading">
+          <div>
+            <h3>Сравнение на сечения</h3>
+            <p>Същият товар и дължина, различно сечение.</p>
+          </div>
+          <span class="limit-chip">ориентир: 3%</span>
+        </div>
+
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Сечение</th>
+                <th>ΔU</th>
+                <th>ΔU %</th>
+                <th>Статус</th>
+              </tr>
+            </thead>
+            <tbody id="drop-comparison-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="note-panel">
+        <strong>Важно</strong>
+        <p>
+          Тази версия използва опростен резистивен модел за бърза ориентировъчна проверка.
+          Преди реално оразмеряване ще добавим температурни фактори, реактивна съставка,
+          начин на полагане и нормативни ограничения.
+        </p>
+      </div>
+    </section>
+  </main>
+  <div id="page-end-sentinel" class="page-end-sentinel" aria-hidden="true"></div>
+
+
+  <button id="scroll-top" class="scroll-top" type="button" aria-label="Нагоре" title="Нагоре">
+    <span aria-hidden="true">↑</span>
+  </button>
+
+  <nav class="mobile-nav" aria-label="Мобилна навигация">
+    <button class="mobile-nav-item is-active" data-view-target="home" type="button">
+      <span>⌂</span><small>Начало</small>
+    </button>
+    <button class="mobile-nav-item" data-view-target="power" type="button">
+      <span>⚡</span><small>Ток</small>
+    </button>
+    <button class="mobile-nav-item" data-view-target="voltage-drop" type="button">
+      <span>📉</span><small>Пад</small>
+    </button>
+  </nav>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

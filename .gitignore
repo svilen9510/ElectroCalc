@@ -1,0 +1,13 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+# Logs / temporary files
+*.log
+*.tmp
+*.bak
+
+# Optional local tooling
+node_modules/
