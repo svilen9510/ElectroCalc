@@ -320,11 +320,6 @@ button.tool-card:hover {
   padding: 11px 36px 11px 13px;
 }
 
-.input-wrap > select:not(:only-child) {
-  width: auto;
-  border-left: 1px solid var(--border);
-}
-
 .unit {
   display: grid;
   place-items: center;
@@ -520,6 +515,7 @@ tr.is-selected {
   flex: 0 0 104px;
   width: 104px;
   min-width: 104px;
+  border-left: 1px solid var(--border);
 }
 
 /* Плаващ бутон за връщане в началото на текущия екран. */

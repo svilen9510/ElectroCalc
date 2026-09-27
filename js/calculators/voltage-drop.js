@@ -18,15 +18,3 @@ export function calculateVoltageDrop({
 
   return { voltageDrop, percent };
 }
-
-export function voltageDropStatus(percent) {
-  if (percent <= 3) {
-    return { label: "● До 3%", className: "status-ok" };
-  }
-
-  if (percent <= 5) {
-    return { label: "● Над 3%", className: "status-warning" };
-  }
-
-  return { label: "● Над 5%", className: "status-danger" };
-}
