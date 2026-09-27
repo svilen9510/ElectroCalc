@@ -1,11 +1,11 @@
-import { STANDARD_CABLE_SECTIONS_MM2 } from "../../data/cable-sizes.js";
+import {
+  DEFAULT_CABLE_SECTION_MM2,
+  STANDARD_CABLE_SECTIONS_MM2
+} from "../../data/cable-sizes.js";
 import { calculateVoltageDrop } from "../calculators/voltage-drop.js";
 import { formatNumber } from "../utils/format.js";
 import { positiveNumber } from "../utils/validation.js";
 import { setStatus } from "./results.js";
-
-const MAX_COMPARISON_SECTION_MM2 = 16;
-const DEFAULT_SECTION_MM2 = 4;
 
 export function initVoltageDropCalculator() {
   const current = document.querySelector("#drop-current");
@@ -21,13 +21,15 @@ export function initVoltageDropCalculator() {
   const validation = document.querySelector("#drop-validation");
   const tbody = document.querySelector("#drop-comparison-body");
   const phaseButtons = [...document.querySelectorAll("[data-drop-phase]")];
-  const sections = STANDARD_CABLE_SECTIONS_MM2.filter(
-    (candidate) => candidate <= MAX_COMPARISON_SECTION_MM2
-  );
+  const sections = STANDARD_CABLE_SECTIONS_MM2;
 
   section.innerHTML = sections.map((candidate) =>
-    `<option value="${candidate}"${candidate === DEFAULT_SECTION_MM2 ? " selected" : ""}>${candidate} mm²</option>`
+    `<option value="${candidate}">${candidate} mm²</option>`
   ).join("");
+  section.value = String(DEFAULT_CABLE_SECTION_MM2);
+
+  const syncMaterialPicker = initDesktopSelectPicker(material);
+  const syncSectionPicker = initDesktopSelectPicker(section);
 
   let phases = 1;
 
@@ -36,6 +38,9 @@ export function initVoltageDropCalculator() {
   }
 
   function update() {
+    syncMaterialPicker();
+    syncSectionPicker();
+
     const i = positiveNumber(current.value, "Токът");
     const l = positiveNumber(length.value, "Дължината");
     const u = positiveNumber(voltage.value, "Напрежението");
@@ -75,7 +80,9 @@ export function initVoltageDropCalculator() {
       <code>ΔU = ${formatNumber(calc.voltageDrop, 2)} V · ${formatNumber(calc.percent, 2)}%</code>
     `;
 
-    tbody.innerHTML = sections.map((candidate) => {
+    const comparisonSections = getComparisonSections(sections, s.value);
+
+    tbody.innerHTML = comparisonSections.map((candidate) => {
       const row = calculateVoltageDrop({
         current: i.value,
         lengthMeters: l.value,
@@ -146,6 +153,155 @@ export function initVoltageDropCalculator() {
   });
 
   update();
+}
+
+function initDesktopSelectPicker(select) {
+  const baseId = select.id;
+  const control = document.querySelector(`#${baseId}-control`);
+  const trigger = document.querySelector(`#${baseId}-trigger`);
+  const triggerValue = document.querySelector(`#${baseId}-trigger-value`);
+  const picker = document.querySelector(`#${baseId}-picker`);
+  const choices = document.querySelector(`#${baseId}-choices`);
+  const desktopQuery = window.matchMedia(
+    "(min-width: 641px) and (hover: hover) and (pointer: fine)"
+  );
+
+  const choiceElements = [...select.options].map((option, index) => {
+    const id = `${baseId}-choice-${index}`;
+    const label = document.createElement("label");
+    const radio = document.createElement("input");
+    const text = document.createElement("span");
+
+    label.className = "enhanced-select-choice";
+    label.htmlFor = id;
+    radio.id = id;
+    radio.type = "radio";
+    radio.name = `${baseId}-choice`;
+    radio.value = option.value;
+    text.textContent = option.textContent.trim();
+
+    label.append(radio, text);
+    return label;
+  });
+
+  choices.replaceChildren(...choiceElements);
+
+  const radios = [...choices.querySelectorAll('input[type="radio"]')];
+  const supportsPopover = typeof picker.showPopover === "function";
+
+  if (supportsPopover) {
+    control.classList.add("is-enhanced");
+
+    picker.addEventListener("beforetoggle", (event) => {
+      if (event.newState === "open") positionPicker();
+    });
+
+    picker.addEventListener("toggle", (event) => {
+      const isOpen = event.newState === "open";
+      trigger.setAttribute("aria-expanded", String(isOpen));
+
+      if (isOpen) {
+        positionPicker();
+        requestAnimationFrame(() => {
+          choices.querySelector('input[type="radio"]:checked')?.focus();
+        });
+      } else if (desktopQuery.matches) {
+        trigger.focus({ preventScroll: true });
+      }
+    });
+
+    picker.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+
+      event.preventDefault();
+      picker.hidePopover();
+    });
+
+    const handleLayoutChange = () => {
+      if (!picker.matches(":popover-open")) return;
+
+      if (desktopQuery.matches) {
+        positionPicker();
+      } else {
+        picker.hidePopover();
+      }
+    };
+
+    window.addEventListener("resize", handleLayoutChange);
+    window.addEventListener("scroll", handleLayoutChange, { passive: true });
+
+    if (typeof desktopQuery.addEventListener === "function") {
+      desktopQuery.addEventListener("change", handleLayoutChange);
+    } else if (typeof desktopQuery.addListener === "function") {
+      desktopQuery.addListener(handleLayoutChange);
+    }
+  }
+
+  radios.forEach((radio) => {
+    radio.addEventListener("change", () => {
+      if (!radio.checked) return;
+
+      select.value = radio.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+
+      if (supportsPopover && picker.matches(":popover-open")) {
+        picker.hidePopover();
+      }
+    });
+  });
+
+  function positionPicker() {
+    const triggerRect = trigger.getBoundingClientRect();
+    const edgeGap = 12;
+    const pickerGap = 6;
+    const width = Math.min(
+      Math.max(triggerRect.width, 220),
+      window.innerWidth - edgeGap * 2
+    );
+    const left = Math.min(
+      Math.max(edgeGap, triggerRect.left),
+      window.innerWidth - width - edgeGap
+    );
+
+    picker.style.width = `${width}px`;
+    picker.style.left = `${left}px`;
+    picker.style.top = `${triggerRect.bottom + pickerGap}px`;
+
+    const pickerRect = picker.getBoundingClientRect();
+    if (pickerRect.bottom > window.innerHeight - edgeGap) {
+      picker.style.top = `${Math.max(edgeGap, triggerRect.top - pickerRect.height - pickerGap)}px`;
+    }
+  }
+
+  function sync() {
+    const selectedValue = select.value;
+    triggerValue.textContent = select.selectedOptions[0]?.textContent.trim() ?? "";
+
+    radios.forEach((radio) => {
+      radio.checked = radio.value === selectedValue;
+      radio.closest(".enhanced-select-choice")?.classList.toggle(
+        "is-selected",
+        radio.checked
+      );
+    });
+  }
+
+  sync();
+  return sync;
+}
+
+function getComparisonSections(sections, selectedSection) {
+  const selectedIndex = sections.indexOf(Number(selectedSection));
+  const windowSize = Math.min(5, sections.length);
+
+  if (selectedIndex < 0) return sections.slice(0, windowSize);
+
+  const start = Math.min(
+    Math.max(selectedIndex - 2, 0),
+    sections.length - windowSize
+  );
+
+  return sections.slice(start, start + windowSize);
 }
 
 function getVoltageDropStatus(percent) {

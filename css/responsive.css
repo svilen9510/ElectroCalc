@@ -213,6 +213,16 @@
   }
 }
 
+@media (min-width: 641px) and (hover: hover) and (pointer: fine) {
+  .enhanced-select-control.is-enhanced > select {
+    display: none;
+  }
+
+  .enhanced-select-control.is-enhanced .enhanced-select-trigger {
+    display: flex;
+  }
+}
+
 /* Fallback за iOS standalone mode, задаван от JavaScript. */
 @media (max-width: 640px) {
   body.is-standalone .mobile-nav {

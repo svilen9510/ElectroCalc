@@ -209,22 +209,74 @@
               </span>
             </label>
 
-            <label class="field">
-              <span class="field-label">Материал</span>
-              <span class="input-wrap">
-                <select id="drop-material">
+            <div class="field">
+              <span id="drop-material-label" class="field-label">Материал</span>
+              <span id="drop-material-control" class="input-wrap enhanced-select-control">
+                <select id="drop-material" aria-labelledby="drop-material-label">
                   <option value="copper" selected>Мед (Cu)</option>
                   <option value="aluminum">Алуминий (Al)</option>
                 </select>
+                <button
+                  id="drop-material-trigger"
+                  class="enhanced-select-trigger"
+                  type="button"
+                  aria-haspopup="dialog"
+                  aria-labelledby="drop-material-label drop-material-trigger-value"
+                  aria-expanded="false"
+                  aria-controls="drop-material-picker"
+                  popovertarget="drop-material-picker"
+                >
+                  <span id="drop-material-trigger-value"></span>
+                  <span class="enhanced-select-chevron" aria-hidden="true">⌄</span>
+                </button>
               </span>
-            </label>
 
-            <label class="field">
-              <span class="field-label">Сечение</span>
-              <span class="input-wrap">
-                <select id="drop-section"></select>
+              <div
+                id="drop-material-picker"
+                class="enhanced-select-picker"
+                popover
+                role="dialog"
+                aria-labelledby="drop-material-picker-title"
+              >
+                <fieldset>
+                  <legend id="drop-material-picker-title">Избери материал</legend>
+                  <div id="drop-material-choices" class="enhanced-select-choices"></div>
+                </fieldset>
+              </div>
+            </div>
+
+            <div class="field">
+              <span id="drop-section-label" class="field-label">Сечение</span>
+              <span id="drop-section-control" class="input-wrap enhanced-select-control">
+                <select id="drop-section" aria-labelledby="drop-section-label"></select>
+                <button
+                  id="drop-section-trigger"
+                  class="enhanced-select-trigger"
+                  type="button"
+                  aria-haspopup="dialog"
+                  aria-labelledby="drop-section-label drop-section-trigger-value"
+                  aria-expanded="false"
+                  aria-controls="drop-section-picker"
+                  popovertarget="drop-section-picker"
+                >
+                  <span id="drop-section-trigger-value"></span>
+                  <span class="enhanced-select-chevron" aria-hidden="true">⌄</span>
+                </button>
               </span>
-            </label>
+
+              <div
+                id="drop-section-picker"
+                class="enhanced-select-picker"
+                popover
+                role="dialog"
+                aria-labelledby="drop-section-picker-title"
+              >
+                <fieldset>
+                  <legend id="drop-section-picker-title">Избери сечение</legend>
+                  <div id="drop-section-choices" class="enhanced-select-choices"></div>
+                </fieldset>
+              </div>
+            </div>
           </div>
 
           <div id="drop-validation" class="validation-message" aria-live="polite"></div>

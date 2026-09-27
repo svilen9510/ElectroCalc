@@ -518,6 +518,105 @@ tr.is-selected {
   border-left: 1px solid var(--border);
 }
 
+.enhanced-select-control > select:not(:only-child) {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  border-left: 0;
+}
+
+.enhanced-select-trigger {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 11px 13px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.enhanced-select-chevron {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.enhanced-select-picker {
+  position: fixed;
+  inset: auto;
+  display: none;
+  max-height: min(360px, calc(100vh - 24px));
+  margin: 0;
+  padding: 8px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+html[data-theme="light"] .enhanced-select-picker {
+  border-color: color-mix(in srgb, var(--primary) 32%, var(--border));
+  box-shadow:
+    0 16px 38px color-mix(in srgb, var(--text) 16%, transparent),
+    var(--shadow);
+}
+
+.enhanced-select-picker:popover-open {
+  display: block;
+}
+
+.enhanced-select-picker fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.enhanced-select-picker legend {
+  padding: 7px 9px 9px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.enhanced-select-choices {
+  display: grid;
+  gap: 2px;
+}
+
+.enhanced-select-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 8px 9px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.enhanced-select-choice:hover,
+.enhanced-select-choice:focus-within {
+  background: var(--surface-secondary);
+}
+
+.enhanced-select-choice.is-selected {
+  background: var(--primary-soft);
+}
+
+.enhanced-select-choice input {
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.enhanced-select-choice input:checked + span {
+  color: var(--primary);
+  font-weight: 750;
+}
+
 /* Плаващ бутон за връщане в началото на текущия екран. */
 .scroll-top {
   position: fixed;
