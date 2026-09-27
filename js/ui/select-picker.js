@@ -1,5 +1,5 @@
 const DESKTOP_PICKER_QUERY =
-  "(min-width: 641px) and (hover: hover) and (pointer: fine)";
+  "(hover: hover) and (pointer: fine)";
 
 export function initDesktopSelectPicker(select, { minWidth = 220 } = {}) {
   const baseId = select.id;
