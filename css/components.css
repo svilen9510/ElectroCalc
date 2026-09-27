@@ -518,7 +518,7 @@ tr.is-selected {
   border-left: 1px solid var(--border);
 }
 
-.enhanced-select-control > select:not(:only-child) {
+.enhanced-select-control:not(.compact-select-control) > select:not(:only-child) {
   flex: 1 1 auto;
   width: 100%;
   min-width: 0;
@@ -537,25 +537,48 @@ tr.is-selected {
   text-align: left;
 }
 
+.compact-select-control .enhanced-select-trigger {
+  flex: 0 0 104px;
+  width: 104px;
+  min-width: 104px;
+  border-left: 1px solid var(--border);
+}
+
+.enhanced-select-control.is-open {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
 .enhanced-select-chevron {
   color: var(--text-muted);
   font-size: 1.1rem;
   line-height: 1;
+  transition: transform 140ms ease;
+}
+
+.enhanced-select-control.is-open .enhanced-select-chevron {
+  color: var(--primary);
+  transform: rotate(180deg);
 }
 
 .enhanced-select-picker {
   position: fixed;
   inset: auto;
   display: none;
-  max-height: min(360px, calc(100vh - 24px));
+  max-height: min(340px, calc(100vh - 24px));
   margin: 0;
   padding: 8px;
   overflow-y: auto;
+  scrollbar-width: none;
   border: 1px solid var(--border);
-  border-radius: 11px;
+  border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text);
   box-shadow: var(--shadow);
+}
+
+.enhanced-select-picker::-webkit-scrollbar {
+  display: none;
 }
 
 html[data-theme="light"] .enhanced-select-picker {
@@ -588,11 +611,11 @@ html[data-theme="light"] .enhanced-select-picker {
 }
 
 .enhanced-select-choice {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 40px;
-  padding: 8px 9px;
+  min-height: 46px;
+  padding: 9px 10px;
   border-radius: 8px;
   cursor: pointer;
 }
@@ -602,19 +625,44 @@ html[data-theme="light"] .enhanced-select-picker {
   background: var(--surface-secondary);
 }
 
+.enhanced-select-choice:focus-within {
+  outline: 2px solid color-mix(in srgb, var(--primary) 38%, transparent);
+  outline-offset: -2px;
+}
+
 .enhanced-select-choice.is-selected {
   background: var(--primary-soft);
 }
 
 .enhanced-select-choice input {
-  flex: 0 0 auto;
-  margin: 0;
-  accent-color: var(--primary);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-.enhanced-select-choice input:checked + span {
+.enhanced-select-choice-text {
+  min-width: 0;
+}
+
+.enhanced-select-choice.is-selected .enhanced-select-choice-text {
   color: var(--primary);
   font-weight: 750;
+}
+
+.enhanced-select-check {
+  margin-left: auto;
+  color: var(--primary);
+  font-weight: 800;
+  opacity: 0;
+}
+
+.enhanced-select-choice.is-selected .enhanced-select-check {
+  opacity: 1;
 }
 
 /* Плаващ бутон за връщане в началото на текущия екран. */

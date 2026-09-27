@@ -117,16 +117,42 @@
           </div>
 
           <div class="fields-grid">
-            <label class="field">
-              <span class="field-label">Мощност</span>
-              <span class="input-wrap">
+            <div class="field">
+              <label class="field-label" for="power-value">Мощност</label>
+              <span id="power-unit-control" class="input-wrap enhanced-select-control compact-select-control">
                 <input id="power-value" type="number" min="0" step="0.01" value="5.5" inputmode="decimal">
                 <select id="power-unit" aria-label="Единица за мощност">
                   <option value="1000" selected>kW</option>
                   <option value="1">W</option>
                 </select>
+                <button
+                  id="power-unit-trigger"
+                  class="enhanced-select-trigger"
+                  type="button"
+                  data-accessible-label="Единица за мощност"
+                  aria-haspopup="dialog"
+                  aria-expanded="false"
+                  aria-controls="power-unit-picker"
+                  popovertarget="power-unit-picker"
+                >
+                  <span id="power-unit-trigger-value"></span>
+                  <span class="enhanced-select-chevron" aria-hidden="true">⌄</span>
+                </button>
               </span>
-            </label>
+
+              <div
+                id="power-unit-picker"
+                class="enhanced-select-picker"
+                popover
+                role="dialog"
+                aria-labelledby="power-unit-picker-title"
+              >
+                <fieldset>
+                  <legend id="power-unit-picker-title">Единица за мощност</legend>
+                  <div id="power-unit-choices" class="enhanced-select-choices"></div>
+                </fieldset>
+              </div>
+            </div>
 
             <label class="field">
               <span class="field-label">Напрежение</span>
