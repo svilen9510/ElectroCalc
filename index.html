@@ -47,7 +47,7 @@
 
         <div class="hero-status">
           <span class="status-dot"></span>
-          <span>Версия 0.1.0 · GitHub baseline</span>
+          <span>Версия 0.2.0</span>
         </div>
       </div>
 
@@ -210,8 +210,16 @@
             </div>
           </div>
 
+          <div class="field-group">
+            <span class="field-label">Входни данни</span>
+            <div class="segmented-control" role="group" aria-label="Вход за товара">
+              <button type="button" class="segment is-active" data-drop-input-mode="current" aria-pressed="true">Ток</button>
+              <button type="button" class="segment" data-drop-input-mode="power" aria-pressed="false">Мощност</button>
+            </div>
+          </div>
+
           <div class="fields-grid">
-            <label class="field">
+            <label id="drop-current-field" class="field">
               <span class="field-label">Ток</span>
               <span class="input-wrap">
                 <input id="drop-current" type="number" min="0" step="0.01" value="23.9" inputmode="decimal">
@@ -219,19 +227,63 @@
               </span>
             </label>
 
-            <label class="field">
-              <span class="field-label">Дължина на трасето</span>
-              <span class="input-wrap">
-                <input id="drop-length" type="number" min="0" step="0.1" value="35" inputmode="decimal">
-                <span class="unit">m</span>
+            <div id="drop-power-field" class="field" hidden>
+              <label class="field-label" for="drop-power">Активна електрическа мощност</label>
+              <span id="drop-power-unit-control" class="input-wrap enhanced-select-control compact-select-control">
+                <input id="drop-power" type="number" min="0" step="0.01" value="5.5" inputmode="decimal">
+                <select id="drop-power-unit" aria-label="Единица за мощност">
+                  <option value="1000" selected>kW</option>
+                  <option value="1">W</option>
+                </select>
+                <button
+                  id="drop-power-unit-trigger"
+                  class="enhanced-select-trigger"
+                  type="button"
+                  data-accessible-label="Единица за мощност"
+                  aria-haspopup="dialog"
+                  aria-expanded="false"
+                  aria-controls="drop-power-unit-picker"
+                  popovertarget="drop-power-unit-picker"
+                >
+                  <span id="drop-power-unit-trigger-value"></span>
+                  <span class="enhanced-select-chevron" aria-hidden="true">⌄</span>
+                </button>
               </span>
-            </label>
+
+              <div
+                id="drop-power-unit-picker"
+                class="enhanced-select-picker"
+                popover
+                role="dialog"
+                aria-labelledby="drop-power-unit-picker-title"
+              >
+                <fieldset>
+                  <legend id="drop-power-unit-picker-title">Единица за мощност</legend>
+                  <div id="drop-power-unit-choices" class="enhanced-select-choices"></div>
+                </fieldset>
+              </div>
+            </div>
 
             <label class="field">
               <span class="field-label">Напрежение</span>
               <span class="input-wrap">
                 <input id="drop-voltage" type="number" min="1" step="1" value="230" inputmode="decimal">
                 <span class="unit">V</span>
+              </span>
+            </label>
+
+            <label class="field">
+              <span class="field-label">cos φ</span>
+              <span class="input-wrap">
+                <input id="drop-cosphi" type="number" min="0.01" max="1" step="0.01" value="1" inputmode="decimal">
+              </span>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Еднопосочна физическа дължина на трасето</span>
+              <span class="input-wrap">
+                <input id="drop-length" type="number" min="0" step="0.1" value="35" inputmode="decimal">
+                <span class="unit">m</span>
               </span>
             </label>
 
@@ -311,17 +363,18 @@
         <aside class="result-panel" aria-live="polite">
           <span class="result-kicker">Пад на напрежение</span>
           <div class="result-main">
-            <span id="drop-result-volts" class="result-number">0.00</span>
+            <span id="drop-result-volts" class="result-number">7.32</span>
             <span class="result-unit">V</span>
           </div>
 
           <div class="result-secondary">
-            <span id="drop-result-percent">0.00%</span>
-            <span id="drop-status" class="status-pill status-ok">● Допустимо</span>
+            <span id="drop-result-percent">3.18%</span>
+            <span id="drop-status" class="status-pill status-warning">● Над 3%</span>
           </div>
 
           <div class="result-meta">
-            <span id="drop-summary">Cu · 4 mm² · 35 m</span>
+            <div id="drop-result-current">Изчислен ток: 23.90 A</div>
+            <div id="drop-summary">Cu · 4 mm² · 35 m еднопосочно</div>
           </div>
 
           <details class="formula-box">
@@ -358,9 +411,12 @@
       <div class="note-panel">
         <strong>Важно</strong>
         <p>
-          Тази версия използва опростен резистивен модел за бърза ориентировъчна проверка.
-          Преди реално оразмеряване ще добавим температурни фактори, реактивна съставка,
-          начин на полагане и нормативни ограничения.
+          Ориентировъчен модел за установен синусоидален AC режим и балансиран трифазен товар.
+          При трифазна система въведеното напрежение е линейното (междуфазното) напрежение.
+          Дължината е еднопосочният физически маршрут; факторът 2 при еднофазна система отчита
+          отиващия и връщащия проводник. Използва се само съпротивлението при 20°C — без
+          реактивно съпротивление и без температурна компенсация. Не се проверяват допустим ток,
+          начин на полагане, групиране, защити или други проектни условия.
         </p>
       </div>
     </section>
