@@ -61,3 +61,9 @@ After editing:
 1. Review the diff for unrelated changes.
 2. Verify existing behavior was not broken.
 3. Summarize which files changed and why.
+
+## Testing
+
+- Add or update tests when changing calculation logic or unit conversion.
+- Run `npm test` before completing relevant work.
+- Do not bypass failing tests by changing expected values unless the electrical behavior is intentionally changed and verified.

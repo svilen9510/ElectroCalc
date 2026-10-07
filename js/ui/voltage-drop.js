@@ -5,9 +5,11 @@ import {
 } from "../../data/cable-sizes.js";
 import { calculateVoltageDrop } from "../calculators/voltage-drop.js";
 import { formatNumber } from "../utils/format.js";
+import { convertUnit } from "../utils/units.js";
 import { positiveNumber, rangeNumber } from "../utils/validation.js";
 import { setStatus } from "./results.js";
 import { initDesktopSelectPicker } from "./select-picker.js";
+import { initUnitSelectConversion } from "./unit-select.js";
 
 export function initVoltageDropCalculator() {
   const currentInput = document.getElementById("drop-current");
@@ -54,6 +56,7 @@ export function initVoltageDropCalculator() {
   const syncMaterialPicker = initDesktopSelectPicker(materialSelect);
   const syncSectionPicker = initDesktopSelectPicker(sectionSelect);
   const syncPowerUnitPicker = initDesktopSelectPicker(powerUnitSelect, { minWidth: 160 });
+  initUnitSelectConversion(powerInput, powerUnitSelect, "power");
 
   let phases = 1;
   let inputMode = "current";
@@ -77,7 +80,12 @@ export function initVoltageDropCalculator() {
 
     const loadResult = inputMode === "power"
       ? positiveNumber(
-        Number(powerInput.value) * Number(powerUnitSelect.value),
+        convertUnit(
+          Number(powerInput.value),
+          powerUnitSelect.value,
+          "W",
+          "power"
+        ),
         "Мощността"
       )
       : positiveNumber(currentInput.value, "Токът");
