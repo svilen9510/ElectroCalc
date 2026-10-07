@@ -11,3 +11,8 @@ Thumbs.db
 
 # Optional local tooling
 node_modules/
+coverage/
+
+# Local environment files
+.env
+.env.*

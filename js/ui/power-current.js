@@ -1,8 +1,10 @@
 import { calculateCurrent } from "../calculators/power-current.js";
 import { phaseLabel } from "../utils/electrical.js";
 import { formatNumber } from "../utils/format.js";
+import { convertUnit } from "../utils/units.js";
 import { positiveNumber, rangeNumber } from "../utils/validation.js";
 import { initDesktopSelectPicker } from "./select-picker.js";
+import { initUnitSelectConversion } from "./unit-select.js";
 
 export function initPowerCurrentCalculator() {
   const power = document.querySelector("#power-value");
@@ -15,13 +17,17 @@ export function initPowerCurrentCalculator() {
   const validation = document.querySelector("#power-validation");
   const phaseButtons = [...document.querySelectorAll("[data-power-phase]")];
   const syncUnitPicker = initDesktopSelectPicker(unit, { minWidth: 160 });
+  initUnitSelectConversion(power, unit, "power");
 
   let phases = 1;
 
   function update() {
     syncUnitPicker();
 
-    const p = positiveNumber(Number(power.value) * Number(unit.value), "Мощността");
+    const p = positiveNumber(
+      convertUnit(Number(power.value), unit.value, "W", "power"),
+      "Мощността"
+    );
     const v = positiveNumber(voltage.value, "Напрежението");
     const c = rangeNumber(cosPhi.value, "cos φ", 0.01, 1);
 
@@ -44,7 +50,7 @@ export function initPowerCurrentCalculator() {
 
     result.textContent = formatNumber(current, 2);
 
-    const displayPower = unit.value === "1000"
+    const displayPower = unit.value === "kW"
       ? `${formatNumber(Number(power.value), 2)} kW`
       : `${formatNumber(Number(power.value), 0)} W`;
 
