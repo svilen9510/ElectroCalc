@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { version as appVersion } from "../package.json";
 import PowerCurrentCalculator from "./calculators/PowerCurrentCalculator.jsx";
 import VoltageDropCalculator from "./calculators/VoltageDropCalculator.jsx";
 import { useHashNavigation } from "./hooks/useHashNavigation.js";
@@ -177,7 +178,7 @@ function HomeView({ navigate }) {
 
         <div className="hero-status">
           <span className="status-dot" />
-          <span>Версия 0.2.0</span>
+          <span>Версия {appVersion}</span>
         </div>
       </div>
 
