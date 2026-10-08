@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import PowerCurrentCalculator from "./calculators/PowerCurrentCalculator.jsx";
 import { useHashNavigation } from "./hooks/useHashNavigation.js";
 import { useTheme } from "./hooks/useTheme.js";
 
@@ -86,13 +87,7 @@ export default function App() {
       <main className="container app-main">
         {activeView === "home" && <HomeView navigate={navigate} />}
         {activeView === "power" && (
-          <CalculatorPlaceholder
-            view="power"
-            title="Мощност и ток"
-            description="Изчисляване на ток по зададена активна мощност."
-            stage="Етап 2"
-            navigate={navigate}
-          />
+          <PowerCurrentCalculator navigateHome={() => navigate("home")} />
         )}
         {activeView === "voltage-drop" && (
           <CalculatorPlaceholder

@@ -16,16 +16,16 @@ This checklist must be complete before the React application replaces the curren
 
 ## Power / Current
 
-- [ ] 1-phase
-- [ ] Balanced 3-phase
-- [ ] Voltage
-- [ ] cos phi
-- [ ] W
-- [ ] kW
-- [ ] W ↔ kW value-preserving conversion
-- [ ] Validation
-- [ ] Calculation explanation
-- [ ] Exact existing numerical behavior
+- [x] 1-phase
+- [x] Balanced 3-phase
+- [x] Voltage
+- [x] cos phi
+- [x] W
+- [x] kW
+- [x] W ↔ kW value-preserving conversion
+- [x] Validation
+- [x] Calculation explanation
+- [x] Exact existing numerical behavior
 
 ## Voltage Drop
 
