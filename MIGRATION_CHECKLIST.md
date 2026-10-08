@@ -29,23 +29,23 @@ This checklist must be complete before the React application replaces the curren
 
 ## Voltage Drop
 
-- [ ] Current mode
-- [ ] Power mode
-- [ ] 1-phase
-- [ ] Balanced 3-phase
-- [ ] Cu
-- [ ] Al
-- [ ] Cable sections
-- [ ] cos phi
-- [ ] W/kW conversion
-- [ ] Calculated current
-- [ ] Voltage drop V
-- [ ] Voltage drop %
-- [ ] Status indicators
-- [ ] Five-section comparison
-- [ ] Comparison-row section selection
-- [ ] Assumptions/formula explanation
-- [ ] Exact existing numerical behavior
+- [x] Current mode
+- [x] Power mode
+- [x] 1-phase
+- [x] Balanced 3-phase
+- [x] Cu
+- [x] Al
+- [x] Cable sections
+- [x] cos phi
+- [x] W/kW conversion
+- [x] Calculated current
+- [x] Voltage drop V
+- [x] Voltage drop %
+- [x] Status indicators
+- [x] Five-section comparison
+- [x] Comparison-row section selection
+- [x] Assumptions/formula explanation
+- [x] Exact existing numerical behavior
 
 ## Pickers
 

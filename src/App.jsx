@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import PowerCurrentCalculator from "./calculators/PowerCurrentCalculator.jsx";
+import VoltageDropCalculator from "./calculators/VoltageDropCalculator.jsx";
 import { useHashNavigation } from "./hooks/useHashNavigation.js";
 import { useTheme } from "./hooks/useTheme.js";
 
@@ -90,13 +91,7 @@ export default function App() {
           <PowerCurrentCalculator navigateHome={() => navigate("home")} />
         )}
         {activeView === "voltage-drop" && (
-          <CalculatorPlaceholder
-            view="voltage-drop"
-            title="Пад на напрежение"
-            description="Проверка по ток, дължина, материал и сечение."
-            stage="Етап 3"
-            navigate={navigate}
-          />
+          <VoltageDropCalculator navigateHome={() => navigate("home")} />
         )}
       </main>
 
@@ -239,32 +234,6 @@ function DisabledToolCard({ icon, title }) {
       </span>
       <span className="badge">скоро</span>
     </div>
-  );
-}
-
-function CalculatorPlaceholder({ view, title, description, stage, navigate }) {
-  return (
-    <section id={`view-${view}`} className="view is-active" data-view={view}>
-      <div className="section-heading">
-        <div>
-          <button className="back-link" type="button" onClick={() => navigate("home")}>
-            ← Начало
-          </button>
-          <h2>{title}</h2>
-          <p>{description}</p>
-        </div>
-      </div>
-
-      <div className="info-panel">
-        <div>
-          <strong>React миграция — {stage}</strong>
-          <p>
-            Калкулаторът ще бъде възстановен с точен функционален паритет в следващия етап.
-            Електрическата логика и тестовете са запазени без промени.
-          </p>
-        </div>
-      </div>
-    </section>
   );
 }
 
