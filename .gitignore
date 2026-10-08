@@ -8,11 +8,14 @@ Thumbs.db
 *.log
 *.tmp
 *.bak
+*.local
 
 # Optional local tooling
 node_modules/
+dist/
 coverage/
 
 # Local environment files
 .env
 .env.*
+!.env.example
