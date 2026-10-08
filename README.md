@@ -24,8 +24,9 @@ ElectroCalc е леко responsive уеб приложение за бързи �
 - сравнение на пет стандартни сечения около избраното сечение;
 - native `<select>` контроли на mobile/touch устройства;
 - тематично съгласувани enhanced pickers на desktop устройства с fine pointer;
-- отделена calculator / UI / helper / data логика;
-- директна съвместимост със static GitHub Pages deployment.
+- React интерфейс с отделени UI компоненти, hooks и calculator views;
+- framework-independent логика за изчисления, единици, валидация и референтни данни;
+- Vite production build и GitHub Pages deployment чрез GitHub Actions.
 
 ## Модел за пад на напрежение
 
@@ -58,59 +59,105 @@ Voltage Drop калкулаторът използва resistance-only AC мод
 
 ## Технологии
 
+- React
+- Vite
+- JavaScript / JSX
+- ES modules
 - HTML
 - CSS
-- Vanilla JavaScript
-- ES modules
+- Vitest
+- GitHub Actions
 
-Няма framework и няма backend. Проектът е подходящ за GitHub Pages.
+React управлява интерактивния UI и state слоя. Електрическите изчисления, конвертирането на
+единици, валидацията и референтните данни остават framework-independent модули. Production
+приложението се изгражда с Vite и се публикува в GitHub Pages чрез GitHub Actions.
+ElectroCalc няма backend и остава статично frontend приложение.
 
 ## Структура
 
 ```text
 ElectroCalc/
-├── index.html
-├── AGENTS.md
-├── README.md
-├── .gitignore
+├── .github/workflows/   # CI проверки и GitHub Pages deployment
 ├── assets/
-├── css/
-├── data/
-└── js/
-    ├── calculators/
-    ├── ui/
-    └── utils/
+├── css/                 # теми, компоненти и responsive стилове
+├── data/                # кабелни сечения, материали и референтни данни
+├── js/
+│   ├── calculators/     # framework-independent calculator/domain логика
+│   └── utils/           # общи electrical, units и validation helpers
+├── src/
+│   ├── calculators/     # React calculator views
+│   ├── components/      # споделени React UI компоненти
+│   ├── hooks/           # navigation и theme hooks
+│   ├── App.jsx          # application shell
+│   └── main.jsx         # React entry point
+├── tests/               # Vitest domain и React UI regression тестове
+├── index.html
+├── package.json
+└── vite.config.js
 ```
 
-## Локално стартиране
+## Локална разработка
 
-Поради ES modules използвай локален web server.
+Инсталирай зависимостите и стартирай Vite development server:
 
-### VS Code + Live Server
-
-Отвори папката във VS Code и стартирай `index.html` с Live Server.
-
-### Python
-
-```bash
-python -m http.server 8000
+```sh
+npm install
+npm run dev
 ```
 
-После отвори:
+Vite показва локалния development URL в терминала. За тест от друго устройство в същата
+локална мрежа използвай:
+
+```sh
+npm run dev -- --host
+```
+
+## Production build и preview
+
+```sh
+npm run build
+npm run preview
+```
+
+Production файловете се генерират в `dist/`. Директорията е build output, игнорира се от Git
+и не се commit-ва.
+
+## Тестване
+
+```sh
+npm test
+npm run test:watch
+npm run test:coverage
+```
+
+Vitest защитава electrical/domain изчисленията и избрани regression поведения на React UI.
+
+## GitHub Pages и CI
+
+Production deployment процесът е:
 
 ```text
-http://localhost:8000
+feature branch
+→ tests/build
+→ pull request
+→ merge to main
+→ GitHub Actions
+→ Vite production build
+→ GitHub Pages deployment
 ```
 
-## Начален Git workflow
+`tests.yml` валидира branch и pull request промените. След merge в `main`, отделният Pages
+workflow изгражда приложението с Vite и публикува генерираното съдържание от `dist/`.
+Repository source файловете не се публикуват директно. Сайтът остава статичен frontend.
 
-```bash
-git init
-git add .
-git commit -m "Initial ElectroCalc baseline"
-```
+## Работен Git процес
 
-След това repository-то може да се свърже с GitHub.
+- създай фокусиран branch;
+- реализирай ограничената промяна;
+- изпълни тестовете и production build;
+- push-ни branch-а и отвори pull request;
+- изчакай CI проверките;
+- merge-ни в `main`, след което GitHub Pages deployment се стартира автоматично.
 
 ## Важно за електротехническите изчисления
 
