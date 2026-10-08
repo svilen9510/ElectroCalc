@@ -7,7 +7,7 @@ ElectroCalc е леко responsive уеб приложение за бързи �
 
 ## Текуща версия
 
-**v0.2.0 — Improved Voltage Drop Engine**
+**v0.3.0 — React/Vite Migration**
 
 Текущата версия включва:
 
