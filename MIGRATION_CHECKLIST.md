@@ -65,5 +65,6 @@ This checklist must be complete before the React application replaces the curren
 - [ ] Narrow desktop verified
 - [ ] Mobile verified
 - [ ] Desktop verified
-- [ ] GitHub Pages deployment workflow enabled at final cutover
+- [x] Production GitHub Pages workflow prepared for `main`
+- [ ] GitHub Pages source switched to GitHub Actions at final cutover
 - [ ] Production deployment verified at `/ElectroCalc/`
