@@ -284,7 +284,13 @@ button.tool-card:hover {
 }
 
 .field {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+}
+
+.field > .input-wrap {
+  margin-top: auto;
 }
 
 .input-wrap {
