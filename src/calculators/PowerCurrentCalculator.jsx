@@ -163,7 +163,7 @@ export default function PowerCurrentCalculator({ navigateHome }) {
               <PowerInput
                 id="general-active-power"
                 unitId="general-power-unit"
-                label="Активна електрическа мощност P"
+                label="Активна мощност P"
                 value={generalPower}
                 unit={generalPowerUnit}
                 unitAriaLabel="Единица за активна мощност"
@@ -204,6 +204,8 @@ export default function PowerCurrentCalculator({ navigateHome }) {
             </p>
           )}
 
+          <PowerFactorHelp />
+
           <div className="validation-message" aria-live="polite">
             {validationMessage}
           </div>
@@ -216,17 +218,7 @@ export default function PowerCurrentCalculator({ navigateHome }) {
         />
       </div>
 
-      <div className="note-panel">
-        <strong>Допускания</strong>
-        <p>
-          Синусоидален установен AC режим; при трифазна система — балансиран товар и RMS линейно
-          напрежение, а при еднофазна — RMS захранващо напрежение. cos φ е факторът на мощността в
-          този модел. {isMotor
-            ? "Номиналната мощност на двигателя е механичната мощност на вала."
-            : "P е активната електрическа входна мощност."}
-          {" "}Не се моделират пусков ток, VFD, хармоници, кабели, защити или нормативно съответствие.
-        </p>
-      </div>
+      <PowerAssumptions isMotor={isMotor} />
     </section>
   );
 }
@@ -308,6 +300,43 @@ function NumericField({ id, label, value, onChange, unit }) {
   );
 }
 
+function PowerFactorHelp() {
+  return (
+    <details className="reference-help">
+      <summary>Референтни стойности за cos φ</summary>
+      <div className="reference-help-content">
+        <ul>
+          <li>Резистивен нагревател, бойлер или класически нагревателен товар: приблизително 1,00.</li>
+          <li>Електрическа фурна или котлони с резистивни нагреватели: приблизително 1,00.</li>
+          <li>Електродвигател: използвайте стойността от табелката или производителя.</li>
+          <li>LED или електронен товар: използвайте техническата документация.</li>
+          <li>Смесен товар или контактна група: няма универсална стойност.</li>
+        </ul>
+        <p>Стойностите са само ориентировъчни, а не нормативни константи.</p>
+      </div>
+    </details>
+  );
+}
+
+function PowerAssumptions({ isMotor }) {
+  return (
+    <div className="note-panel">
+      <strong>Допускания</strong>
+      <p>
+        Моделът е за синусоидален установен AC режим. При еднофазна система U е RMS захранващото
+        напрежение. При трифазна система се приема балансиран товар, а U е RMS линейното напрежение.
+        cos φ е факторът на мощността, използван в модела.
+      </p>
+      <p>
+        {isMotor
+          ? "Въведената номинална мощност е механичната изходна мощност на вала. За η и cos φ използвайте данните от табелката или производителя, когато са налични. Изчисленият ток може да се различава от тока на табелката според реалния работен режим. Не се моделира пусков ток."
+          : "Въведеното P е активната електрическа входна мощност."}
+        {" "}Моделът не включва хармоници, VFD поведение, оразмеряване на кабели, избор на защити или проверка за нормативно съответствие.
+      </p>
+    </div>
+  );
+}
+
 function PowerResults({ result, phases, voltage }) {
   return (
     <aside className="result-panel" aria-live="polite">
@@ -341,7 +370,7 @@ function ResultValues({ result }) {
   const values = result.mode === "motor"
     ? [
       ["Механична мощност на вала", formatPower(result.shaftPowerWatts, "W", "kW")],
-      ["Активна електрическа входна мощност P", formatPower(result.electricalInputPowerWatts, "W", "kW")],
+      ["Активна електрическа входна мощност Pвх", formatPower(result.electricalInputPowerWatts, "W", "kW")],
       ["Привидна мощност S", formatPower(result.apparentPowerVoltAmps, "VA", "kVA")],
       ["Реактивна мощност Q", formatPower(result.reactivePowerVars, "var", "kvar")],
       ["cos φ", formatNumber(result.cosPhi, 2)],
@@ -367,33 +396,55 @@ function ResultValues({ result }) {
 }
 
 function PowerFormula({ result }) {
+  const isMotor = result.mode === "motor";
+  const activePowerSymbol = isMotor ? "Pвх" : "P";
   const currentFormula = result.phases === 3
     ? "I = S / (√3 × U)"
     : "I = S / U";
   const currentSubstitution = result.phases === 3
     ? `I = ${formatNumber(result.apparentPowerVoltAmps, 2)} / (√3 × ${formatNumber(result.voltage, 2)}) = ${formatNumber(result.currentAmps, 2)} A`
     : `I = ${formatNumber(result.apparentPowerVoltAmps, 2)} / ${formatNumber(result.voltage, 2)} = ${formatNumber(result.currentAmps, 2)} A`;
-  const activePowerWatts = result.mode === "motor"
+  const activePowerWatts = isMotor
     ? result.electricalInputPowerWatts
     : result.activePowerWatts;
 
   return (
-    <>
-      {result.mode === "motor" && (
-        <>
-          <p>Електрическа входна мощност от механичната мощност на вала:</p>
-          <code>Pел = Pвал / η</code>
-          <code>
-            Pел = {formatNumber(result.shaftPowerWatts, 2)} / {formatNumber(result.efficiency, 2)} = {formatNumber(result.electricalInputPowerWatts, 2)} W
-          </code>
-        </>
+    <ol className="formula-steps">
+      {isMotor && (
+        <FormulaStep
+          title="Електрическа входна мощност"
+          formula="Pвх = Pвал / η"
+          substitution={`Pвх = ${formatNumber(result.shaftPowerWatts, 2)} / ${formatNumber(result.efficiency, 2)} = ${formatNumber(result.electricalInputPowerWatts, 2)} W`}
+        />
       )}
-      <p>AC зависимости:</p>
-      <code>S = P / cos φ = {formatNumber(activePowerWatts, 2)} / {formatNumber(result.cosPhi, 2)} = {formatNumber(result.apparentPowerVoltAmps, 2)} VA</code>
-      <code>Q = P × tan(arccos(cos φ)) = {formatNumber(result.reactivePowerVars, 2)} var</code>
-      <code>{currentFormula}</code>
-      <code>{currentSubstitution}</code>
-    </>
+      <FormulaStep
+        title="Привидна мощност"
+        formula={`S = ${activePowerSymbol} / cos φ`}
+        substitution={`S = ${formatNumber(activePowerWatts, 2)} / ${formatNumber(result.cosPhi, 2)} = ${formatNumber(result.apparentPowerVoltAmps, 2)} VA`}
+      />
+      <FormulaStep
+        title="Реактивна мощност"
+        formula={`Q = ${activePowerSymbol} × tan(arccos(cos φ))`}
+        substitution={`Q = ${formatNumber(activePowerWatts, 2)} × tan(arccos(${formatNumber(result.cosPhi, 2)})) = ${formatNumber(result.reactivePowerVars, 2)} var`}
+      />
+      <FormulaStep
+        title={result.phases === 3 ? "Ток — балансирана трифазна система" : "Ток — еднофазна система"}
+        formula={currentFormula}
+        substitution={currentSubstitution}
+      />
+    </ol>
+  );
+}
+
+function FormulaStep({ title, formula, substitution }) {
+  return (
+    <li>
+      <strong>{title}</strong>
+      <code>
+        <span>{formula}</span>
+        <span>{substitution}</span>
+      </code>
+    </li>
   );
 }
 

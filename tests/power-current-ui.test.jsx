@@ -13,20 +13,20 @@ describe("PowerCurrentCalculator", () => {
     const user = userEvent.setup();
     render(<PowerCurrentCalculator navigateHome={() => {}} />);
 
-    expect(screen.getByLabelText("Активна електрическа мощност P")).toBeTruthy();
+    expect(screen.getByLabelText("Активна мощност P")).toBeTruthy();
     expect(screen.queryByRole("textbox", { name: /^Ефективност η/ })).toBeNull();
 
     await chooseMotorMode(user);
     expect(screen.getByLabelText("Номинална механична мощност на вала")).toBeTruthy();
     expect(screen.getByRole("textbox", { name: /^Ефективност η/ })).toBeTruthy();
-    expect(screen.queryByLabelText("Активна електрическа мощност P")).toBeNull();
+    expect(screen.queryByLabelText("Активна мощност P")).toBeNull();
   });
 
   it("preserves each mode's power value and unit independently", async () => {
     const user = userEvent.setup();
     render(<PowerCurrentCalculator navigateHome={() => {}} />);
 
-    const generalPower = screen.getByLabelText("Активна електрическа мощност P");
+    const generalPower = screen.getByLabelText("Активна мощност P");
     const generalUnit = screen.getByRole("combobox", { name: "Единица за активна мощност" });
     await user.selectOptions(generalUnit, "W");
     await user.clear(generalPower);
@@ -38,7 +38,7 @@ describe("PowerCurrentCalculator", () => {
     await user.type(motorPower, "11");
 
     await user.click(screen.getByRole("button", { name: "Общ товар" }));
-    expect(screen.getByLabelText("Активна електрическа мощност P").value).toBe("7250");
+    expect(screen.getByLabelText("Активна мощност P").value).toBe("7250");
     expect(screen.getByRole("combobox", { name: "Единица за активна мощност" }).value)
       .toBe("W");
 
@@ -52,7 +52,7 @@ describe("PowerCurrentCalculator", () => {
     const user = userEvent.setup();
     render(<PowerCurrentCalculator navigateHome={() => {}} />);
 
-    const powerInput = screen.getByLabelText("Активна електрическа мощност P");
+    const powerInput = screen.getByLabelText("Активна мощност P");
     const unitSelect = screen.getByRole("combobox", { name: "Единица за активна мощност" });
 
     await user.selectOptions(unitSelect, "W");
@@ -101,11 +101,13 @@ describe("PowerCurrentCalculator", () => {
 
     expect(screen.getByText("14,15", { selector: ".result-number" })).toBeTruthy();
     expect(getResultValue("Механична мощност на вала")).toBe("7,50 kW");
-    expect(getResultValue("Активна електрическа входна мощност P")).toBe("8,33 kW");
+    expect(getResultValue("Активна електрическа входна мощност Pвх")).toBe("8,33 kW");
     expect(getResultValue("Привидна мощност S")).toBe("9,80 kVA");
     expect(getResultValue("Реактивна мощност Q")).toBe("5,16 kvar");
     expect(getResultValue("Ефективност η")).toBe("90,00%");
-    expect(screen.getByText("Pел = Pвал / η")).toBeTruthy();
+    expect(screen.getByText("Pвх = Pвал / η")).toBeTruthy();
+    expect(screen.getByText("S = Pвх / cos φ")).toBeTruthy();
+    expect(screen.getByText("Q = Pвх × tan(arccos(cos φ))")).toBeTruthy();
   });
 
   it("clears all dependent motor output when efficiency is invalid", async () => {
@@ -149,11 +151,40 @@ describe("PowerCurrentCalculator", () => {
     const user = userEvent.setup();
     render(<PowerCurrentCalculator navigateHome={() => {}} />);
 
-    await user.clear(screen.getByLabelText("Активна електрическа мощност P"));
+    await user.clear(screen.getByLabelText("Активна мощност P"));
 
     expect(screen.getByText("—", { selector: ".result-number" })).toBeTruthy();
     expect(document.querySelector(".result-values")).toBeNull();
     expect(document.querySelector(".formula-content").textContent).toBe("");
+  });
+
+  it("shows compact non-normative cos phi guidance without changing the input", async () => {
+    const user = userEvent.setup();
+    render(<PowerCurrentCalculator navigateHome={() => {}} />);
+
+    const powerFactor = screen.getByRole("textbox", { name: /^cos φ/ });
+    await user.clear(powerFactor);
+    await user.type(powerFactor, "0.92");
+
+    const help = screen.getByText("Референтни стойности за cos φ").closest("details");
+    expect(help.open).toBe(false);
+    await user.click(screen.getByText("Референтни стойности за cos φ"));
+    expect(help.open).toBe(true);
+    expect(screen.getByText("Стойностите са само ориентировъчни, а не нормативни константи.")).toBeTruthy();
+    expect(powerFactor.value).toBe("0.92");
+  });
+
+  it("shows mode-dependent assumptions", async () => {
+    const user = userEvent.setup();
+    render(<PowerCurrentCalculator navigateHome={() => {}} />);
+
+    expect(screen.getByText(/Въведеното P е активната електрическа входна мощност/)).toBeTruthy();
+    expect(screen.queryByText(/Изчисленият ток може да се различава от тока на табелката/)).toBeNull();
+
+    await chooseMotorMode(user);
+    expect(screen.getByText(/Въведената номинална мощност е механичната изходна мощност на вала/)).toBeTruthy();
+    expect(screen.getByText(/Изчисленият ток може да се различава от тока на табелката/)).toBeTruthy();
+    expect(screen.queryByText(/Въведеното P е активната електрическа входна мощност/)).toBeNull();
   });
 });
 
