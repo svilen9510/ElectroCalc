@@ -344,6 +344,41 @@ button.tool-card:hover {
   font-size: 0.88rem;
 }
 
+.field-help {
+  margin: 14px 0 0;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.reference-help {
+  margin-top: 14px;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.reference-help summary {
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 750;
+}
+
+.reference-help-content ul {
+  margin: 10px 0 0;
+  padding-left: 20px;
+}
+
+.reference-help-content li + li {
+  margin-top: 4px;
+}
+
+.reference-help-content p {
+  margin: 9px 0 0;
+}
+
 .result-kicker {
   color: var(--text-muted);
   font-size: 0.86rem;
@@ -414,6 +449,38 @@ button.tool-card:hover {
   font-size: 0.9rem;
 }
 
+.result-context {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.result-values {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0 auto;
+}
+
+.result-value {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: baseline;
+  gap: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.result-value dt {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.result-value dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
 .formula-box {
   margin-top: 24px;
   border-top: 1px solid var(--border);
@@ -440,6 +507,31 @@ button.tool-card:hover {
   background: var(--surface-secondary);
   color: var(--text);
   white-space: normal;
+}
+
+.formula-steps {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.formula-steps li::marker {
+  color: var(--text);
+  font-weight: 750;
+}
+
+.formula-steps strong,
+.formula-steps code span {
+  display: block;
+}
+
+.formula-steps strong {
+  color: var(--text);
+}
+
+.formula-steps code span + span {
+  margin-top: 4px;
 }
 
 .comparison-panel {
