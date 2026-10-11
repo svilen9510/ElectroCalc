@@ -4,8 +4,7 @@ import {
   DEFAULT_CABLE_SECTION_MM2,
   STANDARD_CABLE_SECTIONS_MM2
 } from "../../data/cable-sizes.js";
-import { CONDUCTOR_MATERIALS } from "../../data/conductor-materials.js";
-import { calculateVoltageDrop } from "../../js/calculators/voltage-drop.js";
+import { calculateVoltageDropRx } from "../../js/calculators/voltage-drop.js";
 import { formatNumber } from "../../js/utils/format.js";
 import { convertUnit } from "../../js/utils/units.js";
 import { positiveNumber, rangeNumber } from "../../js/utils/validation.js";
@@ -25,6 +24,10 @@ const SECTION_OPTIONS = STANDARD_CABLE_SECTIONS_MM2.map((section) => ({
   value: String(section),
   label: `${section} mm²`
 }));
+
+const DEFAULT_RESISTANCE_MODEL = Object.freeze({ type: "iecNormalService" });
+const DEFAULT_REACTANCE_MODEL = Object.freeze({ type: "iecApproximation" });
+const CALCULATION_FREQUENCY_HZ = 50;
 
 export default function VoltageDropCalculator({ navigateHome }) {
   const [inputMode, setInputMode] = useState("current");
@@ -60,24 +63,25 @@ export default function VoltageDropCalculator({ navigateHome }) {
     ? null
     : {
       inputMode,
-      current: inputMode === "current" ? loadResult.value : undefined,
-      powerWatts: inputMode === "power" ? loadResult.value : undefined,
-      voltage: voltageResult.value,
+      currentA: inputMode === "current" ? loadResult.value : undefined,
+      activePowerW: inputMode === "power" ? loadResult.value : undefined,
+      voltageV: voltageResult.value,
       cosPhi: cosPhiResult.value,
-      lengthMeters: lengthResult.value,
+      lengthM: lengthResult.value,
       sectionMm2: sectionResult.value,
       material,
-      phases
+      phases,
+      frequencyHz: CALCULATION_FREQUENCY_HZ,
+      powerFactorDirection: "lagging",
+      resistanceModel: DEFAULT_RESISTANCE_MODEL,
+      reactanceModel: DEFAULT_REACTANCE_MODEL
     };
-  const result = calculationInput ? calculateVoltageDrop(calculationInput) : null;
+  const result = calculationInput ? calculateVoltageDropRx(calculationInput) : null;
   const hasValidResult = result && [
     result.current,
     result.voltageDrop,
     result.percent
   ].every(Number.isFinite);
-  const status = hasValidResult
-    ? getVoltageDropStatus(result.percent)
-    : { label: "—", className: "" };
   const comparisonSections = hasValidResult
     ? getComparisonSections(sectionResult.value)
     : [];
@@ -234,12 +238,9 @@ export default function VoltageDropCalculator({ navigateHome }) {
             <span id="drop-result-percent">
               {hasValidResult ? `${formatNumber(result.percent, 2)}%` : "—"}
             </span>
-            <span id="drop-status" className={`status-pill ${status.className}`}>
-              {status.label}
-            </span>
           </div>
 
-          <div className="result-meta">
+          <div className="result-meta voltage-drop-meta">
             <div id="drop-result-current">
               Изчислен ток: {hasValidResult ? `${formatNumber(result.current, 2)} A` : "—"}
             </div>
@@ -249,6 +250,31 @@ export default function VoltageDropCalculator({ navigateHome }) {
                 : "—"}
             </div>
           </div>
+
+          <dl className="result-values voltage-drop-details">
+            <div className="result-value">
+              <dt>Съпротивление R</dt>
+              <dd id="drop-result-resistance">
+                {hasValidResult ? `${formatNumber(result.resistanceOhmPerKm, 4)} Ω/km` : "—"}
+              </dd>
+            </div>
+            <div className="result-value">
+              <dt>Реактивност X</dt>
+              <dd id="drop-result-reactance">
+                {hasValidResult ? `${formatNumber(result.reactanceOhmPerKm, 2)} Ω/km` : "—"}
+              </dd>
+            </div>
+            <div className="result-value">
+              <dt>Фактор на мощността</dt>
+              <dd id="drop-result-power-factor">
+                {hasValidResult
+                  ? `cos φ ${formatNumber(result.cosPhi, 2)} · sin φ ${formatNumber(result.sinPhi, 2)}`
+                  : "—"}
+              </dd>
+            </div>
+          </dl>
+
+          <CalculationBasis />
 
           <details className="formula-box">
             <summary>Как е изчислено?</summary>
@@ -270,7 +296,6 @@ export default function VoltageDropCalculator({ navigateHome }) {
             <h3>Сравнение на сечения</h3>
             <p>Същият товар и дължина, различно сечение.</p>
           </div>
-          <span className="limit-chip">ориентир: 3%</span>
         </div>
 
         <div className="table-scroll">
@@ -280,16 +305,14 @@ export default function VoltageDropCalculator({ navigateHome }) {
                 <th>Сечение</th>
                 <th>ΔU</th>
                 <th>ΔU %</th>
-                <th>Статус</th>
               </tr>
             </thead>
             <tbody id="drop-comparison-body">
               {comparisonSections.map((candidateSection) => {
-                const candidateResult = calculateVoltageDrop({
+                const candidateResult = calculateVoltageDropRx({
                   ...calculationInput,
                   sectionMm2: candidateSection
                 });
-                const rowStatus = getVoltageDropStatus(candidateResult.percent);
                 const isSelected = candidateSection === sectionResult.value;
 
                 return (
@@ -310,9 +333,6 @@ export default function VoltageDropCalculator({ navigateHome }) {
                     <td data-label="Сечение"><strong>{formatNumber(candidateSection, 1)} mm²</strong></td>
                     <td data-label="ΔU">{formatNumber(candidateResult.voltageDrop, 2)} V</td>
                     <td data-label="ΔU %">{formatNumber(candidateResult.percent, 2)}%</td>
-                    <td data-label="Статус">
-                      <span className={`status-pill ${rowStatus.className}`}>{rowStatus.label}</span>
-                    </td>
                   </tr>
                 );
               })}
@@ -323,15 +343,37 @@ export default function VoltageDropCalculator({ navigateHome }) {
 
       <div className="note-panel">
         <strong>Важно</strong>
-        <p>
-          Ориентировъчен модел за установен синусоидален AC режим и балансиран трифазен товар.
-          При трифазна система въведеното напрежение е линейното (междуфазното) напрежение.
-          Дължината е еднопосочният физически маршрут; факторът 2 при еднофазна система отчита
-          отиващия и връщащия проводник. Използва се само съпротивлението при 20°C — без
-          реактивно съпротивление и без температурна компенсация. Не се проверяват допустим ток,
-          начин на полагане, групиране, защити или други проектни условия.
-        </p>
+        <p>Моделът приема установен синусоидален AC режим, товар в края на въведеното еднопосочно трасе и изоставащ или единичен фактор на мощността. При 3-фазна система товарът е балансиран, а напрежението е линейно RMS.</p>
+        <p>Съпротивлението е инженерната апроксимация на IEC Annex G за нормален режим, а реактивността е приблизителна стойност X = 0,08 Ω/km при 50 Hz.</p>
+        <p>Не се проверяват допустим ток на кабела, начин на полагане, групиране, защита, късо съединение, пускане на двигател, хармоници или съответствие с български/BDS изисквания.</p>
       </div>
+    </section>
+  );
+}
+
+function CalculationBasis() {
+  return (
+    <section className="calculation-basis" aria-labelledby="drop-basis-title">
+      <h3 id="drop-basis-title">Основа на изчислението</h3>
+      <dl>
+        <div>
+          <dt>Съпротивление</dt>
+          <dd>IEC 60364-5-52 Annex G — инженерна апроксимация за нормален режим</dd>
+        </div>
+        <div>
+          <dt>Реактивност</dt>
+          <dd>X = 0,08 Ω/km — приблизителна стойност по IEC/Schneider</dd>
+        </div>
+        <div>
+          <dt>Честота</dt>
+          <dd>50 Hz</dd>
+        </div>
+        <div>
+          <dt>Фактор на мощността</dt>
+          <dd>Въведеният cos φ; изоставащ/индуктивен или единичен товар</dd>
+        </div>
+      </dl>
+      <small>Инженерни източници: IEC 60364-5-52:2009, Annex G; Schneider Electrical Installation Guide, Chapter G.</small>
     </section>
   );
 }
@@ -397,59 +439,69 @@ function SelectField({ id, label, value, options, onChange, pickerTitle }) {
 function VoltageDropFormula({ calculationInput, result }) {
   const {
     inputMode,
-    powerWatts,
-    voltage,
-    cosPhi,
-    lengthMeters,
-    sectionMm2,
-    material,
+    activePowerW,
+    voltageV,
     phases
   } = calculationInput;
   const isThreePhase = Number(phases) === 3;
   const phaseFactor = isThreePhase ? "√3" : "2";
-  const materialData = CONDUCTOR_MATERIALS[material];
 
   return (
-    <>
+    <ol className="formula-steps">
       {inputMode === "power" ? (
-        <>
-          <p>Ток от активна мощност:</p>
+        <li>
+          <strong>Ток от активна електрическа мощност</strong>
           <code>I = {isThreePhase ? "P / (√3 × U × cos φ)" : "P / (U × cos φ)"}</code>
           <code>
-            I = {formatNumber(powerWatts, 2)} / ({isThreePhase ? "√3 × " : ""}{formatNumber(voltage, 2)} × {formatNumber(cosPhi, 2)}) = {formatNumber(result.current, 2)} A
+            I = {formatNumber(activePowerW, 2)} / ({isThreePhase ? "√3 × " : ""}{formatNumber(voltageV, 2)} × {formatNumber(result.cosPhi, 2)}) = {formatNumber(result.current, 2)} A
           </code>
-        </>
-      ) : (
-        <>
-          <p>Въведен ток:</p>
-          <code>I = {formatNumber(result.current, 2)} A</code>
-        </>
-      )}
+        </li>
+      ) : null}
 
-      <p>Пад на напрежение — резистивен модел:</p>
-      <code>ΔU = {phaseFactor} × I × L × (ρ / S) × cos φ</code>
-      <code>
-        ΔU = {phaseFactor} × {formatNumber(result.current, 2)} × {formatNumber(lengthMeters, 2)} × ({formatNumber(materialData.resistivityOhmMm2PerM, 4)} / {formatNumber(sectionMm2, 2)}) × {formatNumber(cosPhi, 2)} = {formatNumber(result.voltageDrop, 2)} V
-      </code>
-      <code>
-        ΔU% = (ΔU / U) × 100 = ({formatNumber(result.voltageDrop, 2)} / {formatNumber(voltage, 2)}) × 100 = {formatNumber(result.percent, 2)}%
-      </code>
-      <p>
-        <strong>Допускания:</strong> установен синусоидален AC режим; {isThreePhase && "балансиран трифазен товар; линейно (междуфазно) напрежение; "}
-        еднопосочна физическа дължина; специфично съпротивление при {materialData.referenceTemperatureC}°C; без реактивно съпротивление и температурна компенсация.
-      </p>
-    </>
+      <li>
+        <strong>Фактор на мощността</strong>
+        <code>cos φ = {formatNumber(result.cosPhi, 4)}{` · `}sin φ = {formatNumber(result.sinPhi, 4)}</code>
+      </li>
+
+      <li>
+        <strong>Използвано съпротивление</strong>
+        <code>R = {formatNumber(result.resistanceOhmPerKm, 4)} Ω/km</code>
+        <p>IEC Annex G — инженерна апроксимация за нормален режим.</p>
+      </li>
+
+      <li>
+        <strong>Използвана реактивност</strong>
+        <code>X = {formatNumber(result.reactanceOhmPerKm, 2)} Ω/km</code>
+        <p>Приблизителна IEC/Schneider стойност при липса на точни кабелни данни.</p>
+      </li>
+
+      <li>
+        <strong>Резистивна съставка</strong>
+        <code>ΔU<sub>R</sub> = {phaseFactor} × I × L × R × cos φ</code>
+        <code>ΔU<sub>R</sub> = {phaseFactor} × {formatNumber(result.current, 4)} × {formatNumber(result.lengthKm, 4)} × {formatNumber(result.resistanceOhmPerKm, 4)} × {formatNumber(result.cosPhi, 4)} = {formatNumber(result.resistiveVoltageDrop, 4)} V</code>
+      </li>
+
+      <li>
+        <strong>Реактивна съставка</strong>
+        <code>ΔU<sub>X</sub> = {phaseFactor} × I × L × X × sin φ</code>
+        <code>ΔU<sub>X</sub> = {phaseFactor} × {formatNumber(result.current, 4)} × {formatNumber(result.lengthKm, 4)} × {formatNumber(result.reactanceOhmPerKm, 4)} × {formatNumber(result.sinPhi, 4)} = {formatNumber(result.reactiveVoltageDrop, 4)} V</code>
+      </li>
+
+      <li>
+        <strong>Общ пад на напрежение</strong>
+        <code>ΔU = ΔU<sub>R</sub> + ΔU<sub>X</sub> = {formatNumber(result.resistiveVoltageDrop, 4)} + {formatNumber(result.reactiveVoltageDrop, 4)} = {formatNumber(result.voltageDrop, 4)} V</code>
+      </li>
+
+      <li>
+        <strong>Процентен пад</strong>
+        <code>ΔU% = 100 × ΔU / U = 100 × {formatNumber(result.voltageDrop, 4)} / {formatNumber(voltageV, 2)} = {formatNumber(result.percent, 4)}%</code>
+      </li>
+    </ol>
   );
 }
 
 function getMaterialLabel(material) {
   return material === "aluminum" ? "Al" : "Cu";
-}
-
-function getVoltageDropStatus(percent) {
-  if (percent <= 3) return { label: "● До 3%", className: "status-ok" };
-  if (percent <= 5) return { label: "● Над 3%", className: "status-warning" };
-  return { label: "● Над 5%", className: "status-danger" };
 }
 
 function getComparisonSections(selectedSection) {

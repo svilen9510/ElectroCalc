@@ -133,9 +133,7 @@
   #drop-comparison-body tr {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-areas:
-      "section volts percent"
-      "status status status";
+    grid-template-areas: "section volts percent";
     column-gap: 14px;
     row-gap: 8px;
     padding: 12px 13px;
@@ -163,10 +161,6 @@
     text-align: right;
   }
 
-  #drop-comparison-body td:nth-child(4) {
-    grid-area: status;
-  }
-
   #drop-comparison-body td:nth-child(2)::before,
   #drop-comparison-body td:nth-child(3)::before {
     content: attr(data-label);
@@ -178,13 +172,6 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
-
-  #drop-comparison-body .status-pill {
-    min-height: 26px;
-    padding: 4px 8px;
-  }
-
-
 
   /* Долното меню вече е основната навигация на телефон. */
   .back-link {

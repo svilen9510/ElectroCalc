@@ -449,6 +449,10 @@ button.tool-card:hover {
   font-size: 0.9rem;
 }
 
+.voltage-drop-meta {
+  margin-bottom: 0;
+}
+
 .result-context {
   color: var(--text-muted);
   font-size: 0.9rem;
@@ -481,6 +485,49 @@ button.tool-card:hover {
   white-space: nowrap;
 }
 
+.voltage-drop-details {
+  margin: 16px 0 0;
+}
+
+.calculation-basis {
+  margin-top: 20px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.calculation-basis h3 {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.calculation-basis dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.calculation-basis dt {
+  color: var(--text);
+  font-weight: 750;
+}
+
+.calculation-basis dd {
+  margin: 2px 0 0;
+}
+
+.calculation-basis small {
+  display: block;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  line-height: 1.45;
+}
+
 .formula-box {
   margin-top: 24px;
   border-top: 1px solid var(--border);
@@ -506,6 +553,7 @@ button.tool-card:hover {
   border-radius: 8px;
   background: var(--surface-secondary);
   color: var(--text);
+  overflow-wrap: anywhere;
   white-space: normal;
 }
 
