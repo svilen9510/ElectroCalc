@@ -5,6 +5,10 @@ import {
   STANDARD_CABLE_SECTIONS_MM2
 } from "../data/cable-sizes.js";
 import { CONDUCTOR_MATERIALS } from "../data/conductor-materials.js";
+import {
+  ENGINEERING_SOURCES,
+  ENGINEERING_SOURCE_IDS
+} from "../data/engineering-sources.js";
 
 describe("electrical reference data", () => {
   it("keeps standard cable sections in ascending order", () => {
@@ -24,6 +28,15 @@ describe("electrical reference data", () => {
     for (const material of Object.values(CONDUCTOR_MATERIALS)) {
       expect(material.resistivityOhmMm2PerM).toBeGreaterThan(0);
       expect(Number.isFinite(material.resistivityOhmMm2PerM)).toBe(true);
+      expect(material.rho20OhmMm2PerM).toBeGreaterThan(0);
+      expect(material.alpha20PerK).toBeGreaterThan(0);
+      expect(material.normalServiceResistivityOhmMm2PerM).toBeGreaterThan(0);
+    }
+  });
+
+  it("links every declared engineering source ID to concise metadata", () => {
+    for (const sourceId of Object.values(ENGINEERING_SOURCE_IDS)) {
+      expect(ENGINEERING_SOURCES[sourceId]).toMatchObject({ sourceId });
     }
   });
 });
