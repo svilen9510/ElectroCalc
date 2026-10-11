@@ -19,3 +19,6 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Private engineering / standards reference documents
+references/private/
