@@ -344,6 +344,77 @@ button.tool-card:hover {
   font-size: 0.88rem;
 }
 
+.advanced-settings {
+  margin-top: 20px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface-secondary);
+}
+
+.advanced-settings > summary {
+  cursor: pointer;
+  padding: 13px 15px;
+  color: var(--text);
+  font-weight: 750;
+}
+
+.advanced-settings-content {
+  display: grid;
+  gap: 18px;
+  padding: 2px 15px 15px;
+}
+
+.advanced-group {
+  min-width: 0;
+  margin: 0;
+  padding: 14px 0 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.advanced-group legend {
+  margin-bottom: 12px;
+  padding: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.advanced-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.advanced-help,
+.advanced-context,
+.comparison-unavailable {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.advanced-help {
+  margin: 10px 0 0;
+}
+
+.advanced-fields-grid .field-help {
+  margin-top: 7px;
+  line-height: 1.45;
+}
+
+.advanced-context {
+  display: grid;
+  gap: 3px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.advanced-context strong {
+  color: var(--text);
+}
+
 .field-help {
   margin: 14px 0 0;
   color: var(--text-muted);
@@ -416,31 +487,6 @@ button.tool-card:hover {
 .result-secondary > span:first-child {
   font-size: 1.25rem;
   font-weight: 800;
-}
-
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 750;
-}
-
-.status-ok {
-  background: var(--success-soft);
-  color: var(--success);
-}
-
-.status-warning {
-  background: var(--warning-soft);
-  color: var(--warning);
-}
-
-.status-danger {
-  background: var(--danger-soft);
-  color: var(--danger);
 }
 
 .result-meta {
@@ -597,6 +643,14 @@ button.tool-card:hover {
 
 .comparison-heading p {
   margin-bottom: 0;
+}
+
+.comparison-unavailable {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-secondary);
 }
 
 .table-scroll {

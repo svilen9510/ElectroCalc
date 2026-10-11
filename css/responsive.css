@@ -47,6 +47,10 @@
     grid-template-columns: 1fr;
   }
 
+  .advanced-fields-grid {
+    grid-template-columns: 1fr;
+  }
+
   .calc-panel,
   .result-panel,
   .comparison-panel {

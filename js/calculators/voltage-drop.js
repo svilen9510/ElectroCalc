@@ -6,35 +6,6 @@ export const VOLTAGE_DROP_CALCULATION_MODEL = "voltage-drop-rx-v1";
 const SUPPORTED_FREQUENCY_HZ = 50;
 const IEC_REACTANCE_OHM_PER_KM = 0.08;
 
-// Transitional resistance-only API used by the existing React calculator.
-// Stage 2 can move the UI to calculateVoltageDropRx without changing today's UI behavior.
-
-export function calculateVoltageDrop({
-  inputMode = "current",
-  current,
-  powerWatts,
-  cosPhi = 1,
-  lengthMeters,
-  sectionMm2,
-  voltage,
-  material = "copper",
-  phases = 1
-}) {
-  const materialData = CONDUCTOR_MATERIALS[material] ?? CONDUCTOR_MATERIALS.copper;
-  const calculatedCurrent = inputMode === "power"
-    ? calculateCurrent({ powerWatts, voltage, cosPhi, phases })
-    : current;
-  const resistancePerMeter = materialData.resistivityOhmMm2PerM / sectionMm2;
-
-  const voltageDrop = Number(phases) === 3
-    ? Math.sqrt(3) * calculatedCurrent * lengthMeters * resistancePerMeter * cosPhi
-    : 2 * calculatedCurrent * lengthMeters * resistancePerMeter * cosPhi;
-
-  const percent = (voltageDrop / voltage) * 100;
-
-  return { current: calculatedCurrent, voltageDrop, percent };
-}
-
 export function calculateVoltageDropRx(input) {
   if (!input || typeof input !== "object") return null;
 

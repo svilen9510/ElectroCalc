@@ -41,11 +41,15 @@ This checklist must be complete before the React application replaces the curren
 - [x] Calculated current
 - [x] Voltage drop V
 - [x] Voltage drop %
-- [x] Status indicators
+- [x] Compliance-like 3%/5% status removed
 - [x] Five-section comparison
 - [x] Comparison-row section selection
 - [x] Assumptions/formula explanation
-- [x] Exact existing numerical behavior
+- [x] Source-backed R + X numerical behavior
+- [x] IEC normal-service resistance basis
+- [x] Temperature-calculated resistance
+- [x] Въведени от потребителя данни за R/X от производител
+- [x] Manufacturer comparison safety
 
 ## Pickers
 
@@ -68,3 +72,27 @@ This checklist must be complete before the React application replaces the curren
 - [x] Production GitHub Pages workflow prepared for `main`
 - [ ] GitHub Pages source switched to GitHub Actions at final cutover
 - [ ] Production deployment verified at `/ElectroCalc/`
+
+## Voltage Drop v0.5.0 manual QA
+
+### Desktop
+
+- [ ] Light and dark themes
+- [ ] Current and Power modes
+- [ ] Advanced collapsed by default
+- [ ] IEC, температурен, производителски и пренебрегнат-X модел
+
+### Mobile
+
+- [ ] Native selects and Advanced section
+- [ ] Section-comparison card layout
+- [ ] Formula wrapping without horizontal scrolling
+- [ ] Result values remain together with their units
+
+### Engineering sanity
+
+- [ ] cos φ = 1 and cos φ = 0.8
+- [ ] X = 0 и данни за R/X от производител
+- [ ] Temperature change recalculates R
+- [ ] Single-phase and balanced three-phase
+- [ ] Cu and Al

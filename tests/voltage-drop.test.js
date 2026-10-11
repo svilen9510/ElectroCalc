@@ -1,22 +1,36 @@
 import { describe, expect, it } from "vitest";
 
-import { calculateVoltageDrop } from "../js/calculators/voltage-drop.js";
+import { calculateVoltageDropRx } from "../js/calculators/voltage-drop.js";
 
-describe("calculateVoltageDrop", () => {
+const LEGACY_REGRESSION_INPUT = Object.freeze({
+  inputMode: "current",
+  phases: 1,
+  voltageV: 230,
+  currentA: 23.9,
+  cosPhi: 1,
+  lengthM: 35,
+  material: "copper",
+  sectionMm2: 4,
+  frequencyHz: 50,
+  powerFactorDirection: "lagging",
+  resistanceModel: Object.freeze({
+    type: "temperatureCalculated",
+    conductorTemperatureC: 20
+  }),
+  reactanceModel: Object.freeze({ type: "ignored" })
+});
+
+function calculateLegacyRegression(overrides = {}) {
+  return calculateVoltageDropRx({ ...LEGACY_REGRESSION_INPUT, ...overrides });
+}
+
+describe("calculateVoltageDropRx historical resistance-only regressions", () => {
   it.each([
     [2.5, 11.711],
     [4, 7.319375],
     [10, 2.92775]
   ])("calculates the current single-phase copper model at %s mm²", (sectionMm2, expectedDrop) => {
-    const result = calculateVoltageDrop({
-      current: 23.9,
-      voltage: 230,
-      cosPhi: 1,
-      lengthMeters: 35,
-      sectionMm2,
-      material: "copper",
-      phases: 1
-    });
+    const result = calculateLegacyRegression({ sectionMm2 });
 
     expect(result.current).toBe(23.9);
     expect(result.voltageDrop).toBeCloseTo(expectedDrop, 10);
@@ -24,13 +38,12 @@ describe("calculateVoltageDrop", () => {
   });
 
   it("calculates the balanced three-phase copper model below unity power factor", () => {
-    const result = calculateVoltageDrop({
-      current: 40,
-      voltage: 400,
+    const result = calculateLegacyRegression({
+      currentA: 40,
+      voltageV: 400,
       cosPhi: 0.8,
-      lengthMeters: 50,
+      lengthM: 50,
       sectionMm2: 10,
-      material: "copper",
       phases: 3
     });
 
@@ -38,31 +51,25 @@ describe("calculateVoltageDrop", () => {
     expect(result.percent).toBeCloseTo(1.2124355653, 10);
   });
 
-  it("calculates the single-phase aluminum model below unity power factor", () => {
-    const result = calculateVoltageDrop({
-      current: 25,
-      voltage: 230,
+  it("uses the sourced 20°C aluminum value instead of the historical approximation", () => {
+    const result = calculateLegacyRegression({
+      currentA: 25,
       cosPhi: 0.9,
-      lengthMeters: 30,
+      lengthM: 30,
       sectionMm2: 6,
-      material: "aluminum",
-      phases: 1
+      material: "aluminum"
     });
 
-    expect(result.voltageDrop).toBeCloseTo(6.4125, 10);
-    expect(result.percent).toBeCloseTo(2.7880434783, 10);
+    expect(result.voltageDrop).toBeCloseTo(6.4575, 10);
+    expect(result.voltageDrop).not.toBeCloseTo(6.4125, 10);
+    expect(result.percent).toBeCloseTo(2.8076086957, 10);
   });
 
   it("derives current from power in power-input mode", () => {
-    const result = calculateVoltageDrop({
+    const result = calculateLegacyRegression({
       inputMode: "power",
-      powerWatts: 5500,
-      voltage: 230,
-      cosPhi: 1,
-      lengthMeters: 35,
-      sectionMm2: 4,
-      material: "copper",
-      phases: 1
+      currentA: undefined,
+      activePowerW: 5500
     });
 
     expect(result.current).toBeCloseTo(23.9130434783, 10);

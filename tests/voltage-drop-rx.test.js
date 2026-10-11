@@ -411,32 +411,3 @@ describe("calculateVoltageDropRx validation", () => {
     expect(calculate({ [field]: value })).toBeNull();
   });
 });
-
-describe("calculateVoltageDropRx legacy compatibility", () => {
-  it("reproduces the historical copper result at 20°C with ignored reactance", () => {
-    const result = calculateVoltageDropRx({
-      ...BASE_INPUT,
-      currentA: 23.9,
-      voltageV: 230,
-      cosPhi: 1,
-      lengthM: 35,
-      sectionMm2: 4
-    });
-
-    expect(result.voltageDrop).toBeCloseTo(7.319375, 10);
-  });
-
-  it("documents the intentional sourced aluminium difference at 20°C", () => {
-    const result = calculate({
-      material: "aluminum",
-      currentA: 25,
-      cosPhi: 0.9,
-      lengthM: 30,
-      sectionMm2: 6
-    });
-    const oldAluminiumDrop = 2 * 25 * 30 * (0.0285 / 6) * 0.9;
-
-    expect(result.voltageDrop).toBeCloseTo(6.4575, 10);
-    expect(result.voltageDrop).not.toBeCloseTo(oldAluminiumDrop, 10);
-  });
-});

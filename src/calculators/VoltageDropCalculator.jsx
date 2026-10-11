@@ -25,9 +25,27 @@ const SECTION_OPTIONS = STANDARD_CABLE_SECTIONS_MM2.map((section) => ({
   label: `${section} mm²`
 }));
 
+const RESISTANCE_BASIS_OPTIONS = [
+  { value: "iecNormalService", label: "IEC апроксимация за нормален режим" },
+  { value: "temperatureCalculated", label: "Изчисление по температура" },
+  { value: "manufacturer", label: "Данни от производител" }
+];
+
+const RESISTANCE_KIND_OPTIONS = [
+  { value: "ac", label: "AC" },
+  { value: "dc", label: "DC" }
+];
+
+const REACTANCE_BASIS_OPTIONS = [
+  { value: "iecApproximation", label: "IEC/Schneider апроксимация" },
+  { value: "manufacturer", label: "Данни от производител" },
+  { value: "ignored", label: "Без реактивна съставка (X = 0)" }
+];
+
 const DEFAULT_RESISTANCE_MODEL = Object.freeze({ type: "iecNormalService" });
 const DEFAULT_REACTANCE_MODEL = Object.freeze({ type: "iecApproximation" });
 const CALCULATION_FREQUENCY_HZ = 50;
+const USER_SUPPLIED_MANUFACTURER_SOURCE_ID = "user-supplied-manufacturer-data";
 
 export default function VoltageDropCalculator({ navigateHome }) {
   const [inputMode, setInputMode] = useState("current");
@@ -40,6 +58,14 @@ export default function VoltageDropCalculator({ navigateHome }) {
   const [length, setLength] = useState("35");
   const [material, setMaterial] = useState("copper");
   const [section, setSection] = useState(String(DEFAULT_CABLE_SECTION_MM2));
+  const [resistanceBasis, setResistanceBasis] = useState(DEFAULT_RESISTANCE_MODEL.type);
+  const [conductorTemperature, setConductorTemperature] = useState("20");
+  const [manufacturerResistance, setManufacturerResistance] = useState("");
+  const [manufacturerResistanceKind, setManufacturerResistanceKind] = useState("ac");
+  const [manufacturerResistanceTemperature, setManufacturerResistanceTemperature] = useState("");
+  const [manufacturerResistanceFrequency, setManufacturerResistanceFrequency] = useState("");
+  const [reactanceBasis, setReactanceBasis] = useState(DEFAULT_REACTANCE_MODEL.type);
+  const [manufacturerReactance, setManufacturerReactance] = useState("");
 
   const normalizedPowerWatts = inputMode === "power"
     ? convertUnit(Number(power), powerUnit, "W", "power")
@@ -49,15 +75,54 @@ export default function VoltageDropCalculator({ navigateHome }) {
     : positiveNumber(current, "Токът");
   const voltageResult = positiveNumber(voltage, "Напрежението");
   const cosPhiResult = rangeNumber(cosPhi, "cos φ", 0.01, 1);
-  const lengthResult = positiveNumber(length, "Дължината");
+  const lengthResult = positiveNumber(length, "Дължината на трасето");
   const sectionResult = positiveNumber(section, "Сечението");
+  const temperatureResult = resistanceBasis === "temperatureCalculated"
+    ? finiteNumber(conductorTemperature, "Температурата на проводника")
+    : validUnusedValue();
+  const manufacturerResistanceResult = resistanceBasis === "manufacturer"
+    ? positiveNumber(manufacturerResistance, "Съпротивлението R")
+    : validUnusedValue();
+  const resistanceTemperatureResult = resistanceBasis === "manufacturer"
+    ? optionalFiniteNumber(
+      manufacturerResistanceTemperature,
+      "Референтната температура"
+    )
+    : validUnusedValue();
+  const resistanceFrequencyResult = resistanceBasis === "manufacturer"
+    ? optionalPositiveNumber(
+      manufacturerResistanceFrequency,
+      "Референтната честота"
+    )
+    : validUnusedValue();
+  const manufacturerReactanceResult = reactanceBasis === "manufacturer"
+    ? nonNegativeNumber(manufacturerReactance, "Реактивността X")
+    : validUnusedValue();
   const firstError = [
     loadResult,
     voltageResult,
     cosPhiResult,
     lengthResult,
-    sectionResult
+    sectionResult,
+    temperatureResult,
+    manufacturerResistanceResult,
+    resistanceTemperatureResult,
+    resistanceFrequencyResult,
+    manufacturerReactanceResult
   ].find((result) => !result.ok);
+
+  const resistanceModel = buildResistanceModel({
+    resistanceBasis,
+    conductorTemperatureC: temperatureResult.value,
+    manufacturerResistanceOhmPerKm: manufacturerResistanceResult.value,
+    manufacturerResistanceKind,
+    referenceTemperatureC: resistanceTemperatureResult.value,
+    referenceFrequencyHz: resistanceFrequencyResult.value
+  });
+  const reactanceModel = buildReactanceModel({
+    reactanceBasis,
+    manufacturerReactanceOhmPerKm: manufacturerReactanceResult.value
+  });
 
   const calculationInput = firstError
     ? null
@@ -73,8 +138,8 @@ export default function VoltageDropCalculator({ navigateHome }) {
       phases,
       frequencyHz: CALCULATION_FREQUENCY_HZ,
       powerFactorDirection: "lagging",
-      resistanceModel: DEFAULT_RESISTANCE_MODEL,
-      reactanceModel: DEFAULT_REACTANCE_MODEL
+      resistanceModel,
+      reactanceModel
     };
   const result = calculationInput ? calculateVoltageDropRx(calculationInput) : null;
   const hasValidResult = result && [
@@ -82,7 +147,8 @@ export default function VoltageDropCalculator({ navigateHome }) {
     result.voltageDrop,
     result.percent
   ].every(Number.isFinite);
-  const comparisonSections = hasValidResult
+  const comparisonUnavailable = resistanceBasis === "manufacturer" || reactanceBasis === "manufacturer";
+  const comparisonSections = hasValidResult && !comparisonUnavailable
     ? getComparisonSections(sectionResult.value)
     : [];
 
@@ -129,8 +195,8 @@ export default function VoltageDropCalculator({ navigateHome }) {
             ariaLabel="Тип система"
             value={String(phases)}
             options={[
-              { value: "1", label: "1-фазно" },
-              { value: "3", label: "3-фазно" }
+              { value: "1", label: "Еднофазна" },
+              { value: "3", label: "Балансирана трифазна" }
             ]}
             onChange={(value) => changePhases(Number(value))}
           />
@@ -196,7 +262,7 @@ export default function VoltageDropCalculator({ navigateHome }) {
             />
             <NumericField
               id="drop-length"
-              label="Еднопосочна физическа дължина на трасето"
+              label="Дължина на трасето (еднопосочна)"
               value={length}
               onChange={setLength}
               unit="m"
@@ -220,8 +286,29 @@ export default function VoltageDropCalculator({ navigateHome }) {
             />
           </div>
 
+          <AdvancedSettings
+            resistanceBasis={resistanceBasis}
+            onResistanceBasisChange={setResistanceBasis}
+            conductorTemperature={conductorTemperature}
+            onConductorTemperatureChange={setConductorTemperature}
+            manufacturerResistance={manufacturerResistance}
+            onManufacturerResistanceChange={setManufacturerResistance}
+            manufacturerResistanceKind={manufacturerResistanceKind}
+            onManufacturerResistanceKindChange={setManufacturerResistanceKind}
+            manufacturerResistanceTemperature={manufacturerResistanceTemperature}
+            onManufacturerResistanceTemperatureChange={setManufacturerResistanceTemperature}
+            manufacturerResistanceFrequency={manufacturerResistanceFrequency}
+            onManufacturerResistanceFrequencyChange={setManufacturerResistanceFrequency}
+            reactanceBasis={reactanceBasis}
+            onReactanceBasisChange={setReactanceBasis}
+            manufacturerReactance={manufacturerReactance}
+            onManufacturerReactanceChange={setManufacturerReactance}
+          />
+
           <div id="drop-validation" className="validation-message" aria-live="polite">
-            {firstError?.message ?? ""}
+            {firstError?.message ?? (calculationInput && !result
+              ? "Разширените данни не могат да бъдат използвани с избрания модел."
+              : "")}
           </div>
         </form>
 
@@ -242,7 +329,7 @@ export default function VoltageDropCalculator({ navigateHome }) {
 
           <div className="result-meta voltage-drop-meta">
             <div id="drop-result-current">
-              Изчислен ток: {hasValidResult ? `${formatNumber(result.current, 2)} A` : "—"}
+              {inputMode === "power" ? "Изчислен ток" : "Използван ток"}: {hasValidResult ? `${formatNumber(result.current, 2)} A` : "—"}
             </div>
             <div id="drop-summary">
               {hasValidResult
@@ -274,7 +361,11 @@ export default function VoltageDropCalculator({ navigateHome }) {
             </div>
           </dl>
 
-          <CalculationBasis />
+          <CalculationBasis
+            resistanceModel={resistanceModel}
+            reactanceModel={reactanceModel}
+            result={hasValidResult ? result : null}
+          />
 
           <details className="formula-box">
             <summary>Как е изчислено?</summary>
@@ -298,71 +389,227 @@ export default function VoltageDropCalculator({ navigateHome }) {
           </div>
         </div>
 
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Сечение</th>
-                <th>ΔU</th>
-                <th>ΔU %</th>
-              </tr>
-            </thead>
-            <tbody id="drop-comparison-body">
-              {comparisonSections.map((candidateSection) => {
-                const candidateResult = calculateVoltageDropRx({
-                  ...calculationInput,
-                  sectionMm2: candidateSection
-                });
-                const isSelected = candidateSection === sectionResult.value;
+        {comparisonUnavailable ? (
+          <p id="drop-comparison-unavailable" className="comparison-unavailable">
+            Сравнението на сечения не е налично при въведени данни от производител,
+            защото R/X се отнасят за конкретен кабел или конструкция.
+          </p>
+        ) : (
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Сечение</th>
+                  <th>ΔU</th>
+                  <th>ΔU %</th>
+                </tr>
+              </thead>
+              <tbody id="drop-comparison-body">
+                {comparisonSections.map((candidateSection) => {
+                  const candidateResult = calculateVoltageDropRx({
+                    ...calculationInput,
+                    sectionMm2: candidateSection
+                  });
+                  const isSelected = candidateSection === sectionResult.value;
 
-                return (
-                  <tr
-                    key={candidateSection}
-                    data-section={candidateSection}
-                    className={isSelected ? "is-selected" : ""}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Избери сечение ${formatNumber(candidateSection, 1)} mm²`}
-                    onClick={() => setSection(String(candidateSection))}
-                    onKeyDown={(event) => {
-                      if (event.key !== "Enter" && event.key !== " ") return;
-                      event.preventDefault();
-                      setSection(String(candidateSection));
-                    }}
-                  >
-                    <td data-label="Сечение"><strong>{formatNumber(candidateSection, 1)} mm²</strong></td>
-                    <td data-label="ΔU">{formatNumber(candidateResult.voltageDrop, 2)} V</td>
-                    <td data-label="ΔU %">{formatNumber(candidateResult.percent, 2)}%</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  return (
+                    <tr
+                      key={candidateSection}
+                      data-section={candidateSection}
+                      className={isSelected ? "is-selected" : ""}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Избери сечение ${formatNumber(candidateSection, 1)} mm²`}
+                      onClick={() => setSection(String(candidateSection))}
+                      onKeyDown={(event) => {
+                        if (event.key !== "Enter" && event.key !== " ") return;
+                        event.preventDefault();
+                        setSection(String(candidateSection));
+                      }}
+                    >
+                      <td data-label="Сечение"><strong>{formatNumber(candidateSection, 1)} mm²</strong></td>
+                      <td data-label="ΔU">{formatNumber(candidateResult.voltageDrop, 2)} V</td>
+                      <td data-label="ΔU %">{formatNumber(candidateResult.percent, 2)}%</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <div className="note-panel">
-        <strong>Важно</strong>
-        <p>Моделът приема установен синусоидален AC режим, товар в края на въведеното еднопосочно трасе и изоставащ или единичен фактор на мощността. При 3-фазна система товарът е балансиран, а напрежението е линейно RMS.</p>
-        <p>Съпротивлението е инженерната апроксимация на IEC Annex G за нормален режим, а реактивността е приблизителна стойност X = 0,08 Ω/km при 50 Hz.</p>
+        <strong>Допускания и ограничения</strong>
+        <p>Калкулаторът моделира установен синусоидален AC пад на напрежение със съпротивление, реактивност, въведения cos φ и избраните инженерни основи. Дължината на трасето е еднопосочна, а товарът е съсредоточен в края му.</p>
+        <p>При балансирана трифазна система напрежението е линейно RMS. Факторът на мощността е изоставащ или единичен, а честотата на модела е 50 Hz.</p>
         <p>Не се проверяват допустим ток на кабела, начин на полагане, групиране, защита, късо съединение, пускане на двигател, хармоници или съответствие с български/BDS изисквания.</p>
       </div>
     </section>
   );
 }
 
-function CalculationBasis() {
+function AdvancedSettings({
+  resistanceBasis,
+  onResistanceBasisChange,
+  conductorTemperature,
+  onConductorTemperatureChange,
+  manufacturerResistance,
+  onManufacturerResistanceChange,
+  manufacturerResistanceKind,
+  onManufacturerResistanceKindChange,
+  manufacturerResistanceTemperature,
+  onManufacturerResistanceTemperatureChange,
+  manufacturerResistanceFrequency,
+  onManufacturerResistanceFrequencyChange,
+  reactanceBasis,
+  onReactanceBasisChange,
+  manufacturerReactance,
+  onManufacturerReactanceChange
+}) {
+  return (
+    <details className="advanced-settings">
+      <summary>Разширени настройки</summary>
+      <div className="advanced-settings-content">
+        <fieldset className="advanced-group">
+          <legend>Съпротивление R</legend>
+          <SelectField
+            id="drop-resistance-basis"
+            label="Основа за съпротивлението"
+            value={resistanceBasis}
+            options={RESISTANCE_BASIS_OPTIONS}
+            onChange={onResistanceBasisChange}
+            pickerTitle="Избери основа за съпротивлението"
+          />
+
+          {resistanceBasis === "iecNormalService" && (
+            <p className="advanced-help">
+              R се определя от изчислителния модел чрез инженерната апроксимация на IEC Annex G за нормален режим.
+            </p>
+          )}
+
+          {resistanceBasis === "temperatureCalculated" && (
+            <div className="advanced-fields-grid">
+              <NumericField
+                id="drop-conductor-temperature"
+                label="Температура на проводника"
+                value={conductorTemperature}
+                onChange={onConductorTemperatureChange}
+                unit="°C"
+                help="Температурата трябва да бъде зададена според реалното работно условие или инженерното допускане. 20 °C е начална референтна стойност."
+              />
+            </div>
+          )}
+
+          {resistanceBasis === "manufacturer" && (
+            <>
+              <div className="advanced-fields-grid">
+                <NumericField
+                  id="drop-manufacturer-resistance"
+                  label="R"
+                  value={manufacturerResistance}
+                  onChange={onManufacturerResistanceChange}
+                  unit="Ω/km"
+                  help="Стойността се използва точно както е въведена, без допълнителна температурна или AC корекция."
+                />
+                <SelectField
+                  id="drop-resistance-kind"
+                  label="Вид на съпротивлението"
+                  value={manufacturerResistanceKind}
+                  options={RESISTANCE_KIND_OPTIONS}
+                  onChange={onManufacturerResistanceKindChange}
+                  pickerTitle="Избери вид на съпротивлението"
+                />
+                <NumericField
+                  id="drop-resistance-reference-temperature"
+                  label="Референтна температура (по избор)"
+                  value={manufacturerResistanceTemperature}
+                  onChange={onManufacturerResistanceTemperatureChange}
+                  unit="°C"
+                />
+                <NumericField
+                  id="drop-resistance-reference-frequency"
+                  label="Референтна честота (по избор)"
+                  value={manufacturerResistanceFrequency}
+                  onChange={onManufacturerResistanceFrequencyChange}
+                  unit="Hz"
+                />
+              </div>
+              {manufacturerResistanceKind === "dc" && (
+                <p id="drop-dc-resistance-disclosure" className="advanced-help">
+                  Въведената DC стойност се използва без преобразуване към AC; AC корекционни ефекти не се моделират.
+                </p>
+              )}
+              <p className="advanced-help">
+                Изборът означава въведени от потребителя данни, а не потвърждение от производител.
+              </p>
+            </>
+          )}
+        </fieldset>
+
+        <fieldset className="advanced-group">
+          <legend>Реактивност X</legend>
+          <SelectField
+            id="drop-reactance-basis"
+            label="Основа за реактивността"
+            value={reactanceBasis}
+            options={REACTANCE_BASIS_OPTIONS}
+            onChange={onReactanceBasisChange}
+            pickerTitle="Избери основа за реактивността"
+          />
+
+          {reactanceBasis === "iecApproximation" && (
+            <p className="advanced-help">
+              X = 0,08 Ω/km при 50 Hz — приблизителна инженерна стойност по IEC/Schneider.
+            </p>
+          )}
+
+          {reactanceBasis === "manufacturer" && (
+            <>
+              <div className="advanced-fields-grid">
+                <NumericField
+                  id="drop-manufacturer-reactance"
+                  label="X"
+                  value={manufacturerReactance}
+                  onChange={onManufacturerReactanceChange}
+                  unit="Ω/km"
+                  help="За Stage 3 се приемат само данни за реактивност при 50 Hz; X не се мащабира автоматично."
+                />
+              </div>
+              <p id="drop-reactance-reference-frequency" className="advanced-help">
+                Референтна честота: <strong>50 Hz</strong>
+              </p>
+            </>
+          )}
+
+          {reactanceBasis === "ignored" && (
+            <p className="advanced-help">
+              Опростено резистивно изчисление без реактивна съставка (X = 0).
+            </p>
+          )}
+        </fieldset>
+
+        <div className="advanced-context">
+          <strong>Контекст на модела</strong>
+          <span id="drop-model-frequency">Фиксирана честота: 50 Hz</span>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function CalculationBasis({ resistanceModel, reactanceModel, result }) {
   return (
     <section className="calculation-basis" aria-labelledby="drop-basis-title">
       <h3 id="drop-basis-title">Основа на изчислението</h3>
       <dl>
         <div>
           <dt>Съпротивление</dt>
-          <dd>IEC 60364-5-52 Annex G — инженерна апроксимация за нормален режим</dd>
+          <dd>{getResistanceBasisDescription(resistanceModel, result)}</dd>
         </div>
         <div>
           <dt>Реактивност</dt>
-          <dd>X = 0,08 Ω/km — приблизителна стойност по IEC/Schneider</dd>
+          <dd>{getReactanceBasisDescription(reactanceModel, result)}</dd>
         </div>
         <div>
           <dt>Честота</dt>
@@ -373,7 +620,7 @@ function CalculationBasis() {
           <dd>Въведеният cos φ; изоставащ/индуктивен или единичен товар</dd>
         </div>
       </dl>
-      <small>Инженерни източници: IEC 60364-5-52:2009, Annex G; Schneider Electrical Installation Guide, Chapter G.</small>
+      <small>{getSourceDisclosure(resistanceModel, reactanceModel)}</small>
     </section>
   );
 }
@@ -402,21 +649,25 @@ function SegmentedButtons({ label, ariaLabel, value, options, onChange }) {
   );
 }
 
-function NumericField({ id, label, value, onChange, unit }) {
+function NumericField({ id, label, value, onChange, unit, help }) {
+  const helpId = help ? `${id}-help` : undefined;
+
   return (
-    <label className="field" htmlFor={id}>
-      <span className="field-label">{label}</span>
+    <div className="field">
+      <label className="field-label" htmlFor={id}>{label}</label>
       <span className="input-wrap">
         <input
           id={id}
           type="text"
           inputMode="decimal"
           value={value}
+          aria-describedby={helpId}
           onChange={(event) => onChange(event.target.value)}
         />
         {unit && <span className="unit">{unit}</span>}
       </span>
-    </label>
+      {help && <small id={helpId} className="field-help">{help}</small>}
+    </div>
   );
 }
 
@@ -466,13 +717,13 @@ function VoltageDropFormula({ calculationInput, result }) {
       <li>
         <strong>Използвано съпротивление</strong>
         <code>R = {formatNumber(result.resistanceOhmPerKm, 4)} Ω/km</code>
-        <p>IEC Annex G — инженерна апроксимация за нормален режим.</p>
+        <p>{getResistanceBasisDescription(calculationInput.resistanceModel, result)}</p>
       </li>
 
       <li>
         <strong>Използвана реактивност</strong>
         <code>X = {formatNumber(result.reactanceOhmPerKm, 2)} Ω/km</code>
-        <p>Приблизителна IEC/Schneider стойност при липса на точни кабелни данни.</p>
+        <p>{getReactanceBasisDescription(calculationInput.reactanceModel, result)}</p>
       </li>
 
       <li>
@@ -498,6 +749,143 @@ function VoltageDropFormula({ calculationInput, result }) {
       </li>
     </ol>
   );
+}
+
+function buildResistanceModel({
+  resistanceBasis,
+  conductorTemperatureC,
+  manufacturerResistanceOhmPerKm,
+  manufacturerResistanceKind,
+  referenceTemperatureC,
+  referenceFrequencyHz
+}) {
+  if (resistanceBasis === "temperatureCalculated") {
+    return {
+      type: "temperatureCalculated",
+      conductorTemperatureC
+    };
+  }
+
+  if (resistanceBasis === "manufacturer") {
+    return {
+      type: "manufacturer",
+      resistanceOhmPerKm: manufacturerResistanceOhmPerKm,
+      resistanceKind: manufacturerResistanceKind,
+      ...(referenceTemperatureC === undefined ? {} : { referenceTemperatureC }),
+      ...(referenceFrequencyHz === undefined ? {} : { referenceFrequencyHz }),
+      sourceId: USER_SUPPLIED_MANUFACTURER_SOURCE_ID
+    };
+  }
+
+  return DEFAULT_RESISTANCE_MODEL;
+}
+
+function buildReactanceModel({ reactanceBasis, manufacturerReactanceOhmPerKm }) {
+  if (reactanceBasis === "manufacturer") {
+    return {
+      type: "manufacturer",
+      reactanceOhmPerKm: manufacturerReactanceOhmPerKm,
+      referenceFrequencyHz: CALCULATION_FREQUENCY_HZ,
+      sourceId: USER_SUPPLIED_MANUFACTURER_SOURCE_ID
+    };
+  }
+
+  if (reactanceBasis === "ignored") return { type: "ignored" };
+
+  return DEFAULT_REACTANCE_MODEL;
+}
+
+function getResistanceBasisDescription(resistanceModel, result) {
+  if (resistanceModel.type === "temperatureCalculated") {
+    const temperature = result?.conductorTemperatureC ?? resistanceModel.conductorTemperatureC;
+    return Number.isFinite(temperature)
+      ? `Изчислено за температура на проводника ${formatNumber(temperature, 1)} °C чрез изходните материални данни.`
+      : "Изчисление според въведената температура на проводника.";
+  }
+
+  if (resistanceModel.type === "manufacturer") {
+    const resistance = result?.resistanceOhmPerKm ?? resistanceModel.resistanceOhmPerKm;
+    const resistanceText = Number.isFinite(resistance)
+      ? `R = ${formatNumber(resistance, 4)} Ω/km`
+      : "въведена стойност R";
+    const metadata = [
+      resistanceModel.resistanceKind?.toUpperCase(),
+      Number.isFinite(resistanceModel.referenceTemperatureC)
+        ? `${formatNumber(resistanceModel.referenceTemperatureC, 1)} °C`
+        : null,
+      Number.isFinite(resistanceModel.referenceFrequencyHz)
+        ? `${formatNumber(resistanceModel.referenceFrequencyHz, 1)} Hz`
+        : null
+    ].filter(Boolean).join(", ");
+
+    return `Данни, въведени от потребителя: ${resistanceText}${metadata ? ` (${metadata})` : ""}; стойността се използва без корекция.`;
+  }
+
+  return "IEC 60364-5-52 Annex G — инженерна апроксимация за нормален режим";
+}
+
+function getReactanceBasisDescription(reactanceModel, result) {
+  if (reactanceModel.type === "manufacturer") {
+    const reactance = result?.reactanceOhmPerKm ?? reactanceModel.reactanceOhmPerKm;
+    return Number.isFinite(reactance)
+      ? `Данни, въведени от потребителя: X = ${formatNumber(reactance, 4)} Ω/km при 50 Hz; без честотно мащабиране.`
+      : "Данни за X, въведени от потребителя при референтна честота 50 Hz.";
+  }
+
+  if (reactanceModel.type === "ignored") {
+    return "Реактивността е умишлено пренебрегната — опростено резистивно изчисление с X = 0.";
+  }
+
+  return "X = 0,08 Ω/km — приблизителна стойност по IEC/Schneider";
+}
+
+function getSourceDisclosure(resistanceModel, reactanceModel) {
+  const resistanceSource = resistanceModel.type === "temperatureCalculated"
+    ? "ABB Electrical Installation Handbook, Annex E"
+    : resistanceModel.type === "manufacturer"
+      ? "въведени от потребителя данни за R"
+      : "IEC 60364-5-52:2009, Annex G";
+  const reactanceSource = reactanceModel.type === "manufacturer"
+    ? "въведени от потребителя данни за X"
+    : reactanceModel.type === "ignored"
+      ? "X е умишлено пренебрегнато"
+      : "IEC 60364-5-52:2009, Annex G и Schneider Electrical Installation Guide, Chapter G";
+
+  return `Инженерни източници: ${resistanceSource}; ${reactanceSource}.`;
+}
+
+function validUnusedValue() {
+  return { ok: true, value: undefined };
+}
+
+function finiteNumber(value, label) {
+  if (typeof value === "string" && value.trim() === "") {
+    return { ok: false, message: `${label} трябва да е крайно число.` };
+  }
+
+  const number = Number(value);
+  return Number.isFinite(number)
+    ? { ok: true, value: number }
+    : { ok: false, message: `${label} трябва да е крайно число.` };
+}
+
+function nonNegativeNumber(value, label) {
+  const result = finiteNumber(value, label);
+  if (!result.ok) return result;
+
+  return result.value >= 0
+    ? result
+    : { ok: false, message: `${label} трябва да е неотрицателно число.` };
+}
+
+function optionalFiniteNumber(value, label) {
+  if (typeof value === "string" && value.trim() === "") return validUnusedValue();
+  return finiteNumber(value, label);
+}
+
+function optionalPositiveNumber(value, label) {
+  if (typeof value === "string" && value.trim() === "") return validUnusedValue();
+  return positiveNumber(value, label);
 }
 
 function getMaterialLabel(material) {
